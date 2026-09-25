@@ -1316,9 +1316,14 @@ function finance(kind){
  S.saleIncome=0;S.buyCost=0;S.prizePending=0;
  if(kind==='winter')S.spA=null;
 }
-function planNet(){var X=lgx(S.div),sc=S.scale||1,spA=S.spA!=null?S.spA:X.sp*sc*(1+((S.rep||0)-(S.rep0||0))/300);return r2(spA+Math.sqrt(sc)*X.att*X.price*Math.round((S.rounds||38)/4)*2/1e8+X.dist-payroll()-(S.mgr?mgrSal(S.mgr):0)-ycost()-expRev()*S.oxR);}
+function candSal(p){return r2(salOf(p)*divPay()*(p.salF!=null?p.salF:(S.oxR!=null?payF(S.scale||1):1)));}
+function pickedList(){return (S.picked||[]).map(function(k){return S.cands[k];}).filter(Boolean);}
+function pickedCost(){return r2(pickedList().reduce(function(s,p){return s+pickFee(p);},0));}
+function pickedSal(){return r2(pickedList().reduce(function(s,p){return s+candSal(p);},0));}
+function availMoney(){return r2((S.money||0)-pickedCost());}
+function planNet(){var X=lgx(S.div),sc=S.scale||1,spA=S.spA!=null?S.spA:X.sp*sc*(1+((S.rep||0)-(S.rep0||0))/300);return r2(spA+Math.sqrt(sc)*X.att*X.price*Math.round((S.rounds||38)/4)*2/1e8+X.dist-payroll()-pickedSal()-(S.mgr?mgrSal(S.mgr):0)-ycost()-expRev()*S.oxR);}
 function renderFin(){
- var f=S.fin,h='<p class="sub" style="margin:0">残高 <b style="color:var(--amber);font-size:18px">'+moneyTxt(S.money||0)+'</b>'+(S.oxR!=null?'　今季の収支見込み（年間）<b>'+moneyTxt(planNet())+'</b>（前半戦・後半戦で半分ずつ）':'')+'　年間の固定費見込み：選手年俸 '+moneyTxt(payroll())+'・監督 '+moneyTxt(S.mgr?mgrSal(S.mgr):0)+'・運営費 '+moneyTxt(opex())+'</p>';
+ var f=S.fin,h='<p class="sub" style="margin:0">残高 <b style="color:var(--amber);font-size:18px">'+moneyTxt(S.money||0)+'</b>'+(pickedList().length?'　→ 獲得予定の移籍金 '+feeTxt(pickedCost())+' を払うと <b style="color:var(--amber)">'+moneyTxt(availMoney())+'</b>':'')+(S.oxR!=null?'　今季の収支見込み（年間）<b>'+moneyTxt(planNet())+'</b>（前半戦・後半戦の決算で半分ずつ計上。年俸はここで支払います）':'')+'　年間の固定費見込み：選手年俸 '+moneyTxt(r2(payroll()+pickedSal()))+(pickedList().length?'（獲得予定の'+pickedList().length+'人ぶん '+feeTxt(pickedSal())+' を含む）':'')+'・監督 '+moneyTxt(S.mgr?mgrSal(S.mgr):0)+'・運営費 '+moneyTxt(opex())+'</p>';
  if(f){
   h+='<table class="fin"><tr><th colspan="2">'+(f.k==='summer'?'前半戦':'後半戦')+'の収支</th></tr>'
    +'<tr><td>スポンサー収入</td><td>'+moneyTxt(f.sp)+'</td></tr>'
@@ -1397,7 +1402,7 @@ function pickFee(p){return p.loanIn?loanFee(p):feeOfP(p);}
 function buyFee(p){return r2(feeOfP(p)*.9);}
 function loanTxt(p){return 'レンタル料 '+feeTxt(loanFee(p))+'・'+(S.window==='summer'?'今季終了まで':'1シーズン')+'・年俸は全額負担・買取オプション '+feeTxt(buyFee(p));}
 function candMoney(p){var fe=feeOfP(p),fi=fitOf(p);
- return '<div class="candmoney">'+(p.nego==='ok'?'✅ 本人合意ずみ　':'本人の移籍意思 <b>'+accTxt(p)+'</b>　')+'移籍金 <b>'+feeTxt(fe)+'</b>　年俸 '+feeTxt(r2(salOf(p)*divPay()))+(fi>=0?'　監督の戦術（'+TACJ[S.mgr.tac]+'）に <b class="fit'+fi+'">'+fitMark(fi)+'</b>':'')+'</div>';}
+ return '<div class="candmoney">'+(p.nego==='ok'?'✅ 本人合意ずみ　':'本人の移籍意思 <b>'+accTxt(p)+'</b>　')+'移籍金 <b>'+feeTxt(fe)+'</b>　年俸 '+feeTxt(candSal(p))+'/年'+(fi>=0?'　監督の戦術（'+TACJ[S.mgr.tac]+'）に <b class="fit'+fi+'">'+fitMark(fi)+'</b>':'')+'</div>';}
 function tableRank(){var t=table();for(var i=0;i<t.length;i++)if(t[i].me)return i+1;return 0;}
 function openSummer(){
  if(S.timer){clearInterval(S.timer);S.timer=null;}
@@ -3805,7 +3810,7 @@ function genCands0(){
 }
 var POSL=['GK','CB','SB','DM','CM','OM','WG','CF'];
 var REGJ={all:'すべて',j:'Jリーグ',big5:'欧州5大リーグ',euo:'欧州その他（蘭・白・葡・蘇）',jpab:'海外組の日本人'};
-function scoutDefault(){return {fee:Math.max(0,r2(S.money||0)),reg:S.div>100?'big5':'j',pos:[],style:'mgr',age:0};}
+function scoutDefault(){return {fee:Math.max(0,availMoney()),reg:S.div>100?'big5':'j',pos:[],style:'mgr',age:0};}
 function scoutRules(){var rep=S.rep||0,d=S.div;
  return {eu:d>100||d===1||(d===2&&rep>=60),big5:d>100||(d===1&&rep>=50),jpab:d>100||d<=2||rep>=40};}
 function scoutPool(q){
@@ -3830,6 +3835,7 @@ function scoutBuild(o){
  p.fee=o.fee;usedNames[p.name]=1;return p;
 }
 function scoutRun(q){
+ q.fee=Math.min(q.fee,Math.max(0,availMoney()));
  var pool=scoutPool(q),style=q.style==='mgr'?(S.mgr?S.mgr.tac:''):q.style,res=[];
  var ref=teamRef();pool.forEach(function(o){var w=o.g<=ref+2?Math.exp(-Math.max(0,ref-2-o.g)/6):Math.exp(-(o.g-ref-2)/1.5);o.key=-Math.log(Math.random()+1e-9)/Math.max(w,1e-4);});
  pool.sort(function(a,b){return a.key-b.key;});
@@ -3849,10 +3855,10 @@ function scoutRun(q){
 }
 function scoutHTML(){
  var q=S.scoutQ||scoutDefault(),left=S.scoutLeft==null?3:S.scoutLeft;
- var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">'+(left>0?'条件に合う実在選手をリストアップします。'+(left===3?'<b>やり直しは2回まで</b>です。':'やり直しはあと<b>'+left+'回</b>です。'):'この移籍期間の獲得方針は決定済みです（やり直しの回数を使い切りました）。')+'残高 '+moneyTxt(S.money||0)+'</p>';
+ var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">'+(left>0?'条件に合う実在選手をリストアップします。'+(left===3?'<b>やり直しは2回まで</b>です。':'やり直しはあと<b>'+left+'回</b>です。'):'この移籍期間の獲得方針は決定済みです（やり直しの回数を使い切りました）。')+'使える予算 <b class="avail">'+moneyTxt(availMoney())+'</b>'+(pickedList().length?'（獲得予定の移籍金を差し引き済み）':'')+'</p>';
  var R=scoutRules(),lim=[];if(!R.big5)lim.push('欧州5大リーグの選手はJ1で監督評価50以上から交渉できます');if(!R.eu)lim.push('欧州その他の選手はJ1、またはJ2で監督評価60以上から');if(!R.jpab)lim.push('海外組の日本人はJ2以上、または監督評価40以上から');
  if(lim.length)h+='<p class="sub" style="margin:0 0 6px;font-size:11px">'+lim.join('。')+'。</p>';
- h+='<label>移籍金の上限（億円）<input type="number" id="sc-fee" min="0" step="0.1" value="'+q.fee+'"></label>';
+ h+='<label>移籍金の上限（億円）<input type="number" id="sc-fee" min="0" step="0.1" value="'+Math.min(q.fee,Math.max(0,availMoney()))+'"></label>';
  h+='<label>地域<select id="sc-reg">';for(var k in REGJ)h+='<option value="'+k+'"'+(q.reg===k?' selected':'')+'>'+REGJ[k]+'</option>';h+='</select></label>';
  h+='<label>プレースタイル<select id="sc-style"><option value="">指定なし</option><option value="mgr"'+(q.style==='mgr'?' selected':'')+'>監督の得意'+(S.mgr?'（'+TACJ[S.mgr.tac]+'）':'')+'</option>';
  for(var t in TACJ)h+='<option value="'+t+'"'+(q.style===t?' selected':'')+'>'+TACJ[t]+'</option>';h+='</select></label>';
@@ -3992,7 +3998,8 @@ function updateCandCount(){
  $('o-count').textContent='獲得 '+n+(S.realStart?'人':' / '+S.cap)+(S.minPick?'（最低'+S.minPick+'人）':'');
  var cost=r2(S.picked.reduce(function(s,k){return s+pickFee(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
  $('btn-tolist').disabled=n<S.minPick||over;
- $('o-count').textContent+='　移籍金 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0);
+ $('o-count').textContent+='　移籍金 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0)+(n?'（獲得後 '+moneyTxt(r2((S.money||0)-cost))+'・年俸 +'+feeTxt(pickedSal())+'/年）':'');
+ if($('o-fin'))renderFin();if($('o-scout')&&$('sc-fee')){var sf=$('sc-fee');if(parseFloat(sf.value)>Math.max(0,availMoney()))sf.value=Math.max(0,availMoney());var sb=document.querySelector('.scoutbox .avail');if(sb)sb.textContent=moneyTxt(availMoney());}
  $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
 }
 function openRelease(){
