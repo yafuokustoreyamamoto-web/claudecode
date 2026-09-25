@@ -107,6 +107,10 @@ p{margin:0 0 .8em;}
 .loanbtn:focus-visible{outline:2px solid var(--amber);}
 .mgrrow.sel{border-color:var(--amber);background:rgba(255,194,26,.14);}
 button.mgrrow{width:100%;text-align:left;font:inherit;color:var(--chalk);background:transparent;cursor:pointer;}
+.cllist{display:grid;gap:6px;margin-top:10px;}
+.clrow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;width:100%;text-align:left;font:inherit;color:var(--chalk);background:transparent;border:1.5px solid var(--line);border-radius:3px;padding:10px;cursor:pointer;}
+.clrow small{grid-column:1/3;font-size:11px;opacity:.8;}
+.clrow:hover,.clrow:focus-visible{border-color:var(--amber);outline:none;}
 .btn.ghost{background:transparent;color:var(--chalk);border:1.5px solid var(--line);}
 .btn.small{padding:11px;font-size:14px;}
 .btn:active{transform:translateY(1px);}
@@ -410,12 +414,22 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
     <button type="button" data-d="n" class="on" aria-pressed="true">ノーマル</button><button type="button" data-d="h" aria-pressed="false">ハード</button><button type="button" data-d="l" aria-pressed="false">レジェンド</button>
   </div>
   <p class="sub" id="diffdesc" style="margin:6px 0 12px;font-size:12px">原作どおりのバランス。見送り10回。</p>
-  <button class="btn cta" id="btn-start">J3から始める</button>
+  <button class="btn cta" id="btn-start">クラブを選んで始める</button>
+  <button class="btn ghost small" id="btn-draftmode" style="margin-top:8px">ドラフトで始める（原作ルール・J3から）</button>
   <button class="btn ghost small" id="btn-import" style="margin-top:10px">セーブデータを読み込む</button>
   <p class="sub" style="margin:14px 0 0;font-size:11px;opacity:.75">実在選手データ版（非公式の改造版）。原作：Football Champion Road J（kanasama）。選手の能力値は名鑑の独自査定をゲーム用に換算したもので、公式の評価ではありません。</p>
   <input type="file" id="i-import" accept=".json,application/json" hidden>
 </section>
 
+<section class="screen" id="s-club">
+  <div class="sec">
+    <h2>クラブを選ぶ</h2>
+    <p class="sub">GMとして率いるクラブを選びます。実在の選手20人と監督を引き継ぎ、そのカテゴリからスタートします。年間収入は実際のクラブの規模をもとにした推定値です。</p>
+    <div class="chips" id="cl-tabs"></div>
+    <div class="cllist" id="cl-list"></div>
+    <button class="btn ghost small" id="btn-clback" style="margin-top:12px">戻る</button>
+  </div>
+</section>
 <section class="screen" id="s-draft">
   <div class="meter">
     <div class="big" id="d-count">獲得 <i>0</i> / 20</div>
@@ -1245,7 +1259,7 @@ function coachAccept(i){
  var star=clamp((squadStr()-8-59)/6,.5,5);
  var oc=newClub({name:oldName,star:star},oldDiv);oc.mgr=S.mgr;S.pool.push(oc);
  S.pool.splice(S.pool.indexOf(c),1);
- S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.money=r2((c.div>100?lgx(c.div).sp*.3:{1:10,2:4,3:2}[c.div])+(S.money>0?0:S.money));
+ S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.3:revOf(c.name,c.div)*.15)+(S.money>0?0:S.money));
  S.squad=clubSquad(c);
  S.slots=[];S.offers=[];S.cands=[];S.picked=[];S.holes=[];S.releasing=[];S.loans=[];S.champStreak=0;S.lastChamp=false;S.aclEntry=null;
  S.target=c.st>=divAvg(c.div)+1?'top':'mid';
@@ -1277,23 +1291,25 @@ function mgrMul(lu){var m=S.mgr;if(!m)return 1;var v=1+(m.r-2)*.01+(S.form===m.f
  (lu||[]).forEach(function(o){if(o.p&&o.sp!=='GK'){n++;if(fitOf(o.p)===2)f++;}});if(n)v+=f/n*.02;return v;}
 function salOf(p){var x=Math.max(0,p.ovr-55);return Math.max(.03,r2(.0008*Math.pow(x,2.15)));}
 function divPay(d){return lgx(d||S.div).pay;}
-function payroll(){return r2(S.squad.reduce(function(s,p){return s+salOf(p);},0)*divPay());}
+function payroll(){return r2(S.squad.reduce(function(s,p){return s+salOf(p)*(p.salF||1);},0)*divPay());}
+function payF(sc){return clamp(Math.pow(sc||1,.7),.35,2.2);}
+function opex(){return r2((S.div>100?lgx(S.div).sp*1.2:revOf(S.teamName,S.div))*.3);}
 function feeOfP(p){if(p.fee!=null)return p.fee;if(p.prospect)return 0;return r2(Math.max(0,.00035*Math.pow(Math.max(0,p.ovr-58),2.3)));}
 function homeGames(from,to){return (S.log||[]).filter(function(x){return x.t==='m'&&x.h&&x.r>from&&x.r<=to;}).length;}
 function finance(kind){
  var d=S.div,n=S.w+S.d+S.l,wr=n?(S.w+S.d*.4)/n:.5,rep=S.rep||0;
  var from=S.finRound||0,to=S.round||0,hg=homeGames(from,to);S.finRound=to;
- var X=lgx(d),sp=r2(X.sp*(1+rep/200)/2);
- var att=Math.round((S.attBoost||1)*X.att*(.7+.6*wr)*(1+rep/300));
+ var X=lgx(d),sc=S.scale||1,sp=r2(X.sp*sc*(1+rep/200)/2);
+ var att=Math.round((S.attBoost||1)*Math.sqrt(sc)*X.att*(.7+.6*wr)*(1+rep/300));
  var gate=r2(att*X.price*hg/1e8),dist=r2(X.dist/2),prize=kind==='winter'?(S.prizePending||0):0;
- var sal=r2(payroll()/2),ms=S.mgr?r2(mgrSal(S.mgr)/2):0,yc=r2(ycost()/2);
- var net=r2(sp+gate+dist+prize-sal-ms-yc);
+ var sal=r2(payroll()/2),ms=S.mgr?r2(mgrSal(S.mgr)/2):0,yc=r2(ycost()/2),ox=r2(opex()/2);
+ var net=r2(sp+gate+dist+prize-sal-ms-yc-ox);
  S.money=r2((S.money||0)+net);
- S.fin={k:kind,yc:yc,sp:sp,att:att,hg:hg,gate:gate,dist:dist,prize:prize,sal:sal,ms:ms,net:net,sales:r2(S.saleIncome||0),buys:r2(S.buyCost||0)};
+ S.fin={k:kind,ox:ox,yc:yc,sp:sp,att:att,hg:hg,gate:gate,dist:dist,prize:prize,sal:sal,ms:ms,net:net,sales:r2(S.saleIncome||0),buys:r2(S.buyCost||0)};
  S.saleIncome=0;S.buyCost=0;S.prizePending=0;
 }
 function renderFin(){
- var f=S.fin,h='<p class="sub" style="margin:0">残高 <b style="color:var(--amber);font-size:18px">'+moneyTxt(S.money||0)+'</b>　来季の人件費見込み（年額）：選手 '+moneyTxt(payroll())+'・監督 '+moneyTxt(S.mgr?mgrSal(S.mgr):0)+'</p>';
+ var f=S.fin,h='<p class="sub" style="margin:0">残高 <b style="color:var(--amber);font-size:18px">'+moneyTxt(S.money||0)+'</b>　年間の固定費見込み：選手年俸 '+moneyTxt(payroll())+'・監督 '+moneyTxt(S.mgr?mgrSal(S.mgr):0)+'・運営費 '+moneyTxt(opex())+'</p>';
  if(f){
   h+='<table class="fin"><tr><th colspan="2">'+(f.k==='summer'?'前半戦':'後半戦')+'の収支</th></tr>'
    +'<tr><td>スポンサー収入</td><td>'+moneyTxt(f.sp)+'</td></tr>'
@@ -1302,6 +1318,7 @@ function renderFin(){
    +(f.prize?'<tr><td>賞金</td><td>'+moneyTxt(f.prize)+'</td></tr>':'')
    +'<tr><td>選手年俸</td><td>▲'+feeTxt(f.sal)+'</td></tr>'
    +'<tr><td>監督年俸</td><td>▲'+feeTxt(f.ms)+'</td></tr>'
+   +(f.ox?'<tr><td>運営費（スタッフ・施設・遠征など）</td><td>▲'+feeTxt(f.ox)+'</td></tr>':'')
    +(f.yc?'<tr><td>ユース運営費</td><td>▲'+feeTxt(f.yc)+'</td></tr>':'')
    +(f.sales?'<tr><td>移籍金収入</td><td>'+moneyTxt(f.sales)+'</td></tr>':'')
    +(f.buys?'<tr><td>移籍金支出</td><td>▲'+feeTxt(f.buys)+'</td></tr>':'')
@@ -1439,6 +1456,49 @@ document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-loan]');if(!b)return;
  e.stopPropagation();e.preventDefault();loanOut(+b.getAttribute('data-loan'));
 },true);
+var REVT={'鹿島アントラーズ':70,'水戸ホーリーホック':12,'浦和レッズ':100,'ジェフユナイテッド千葉':32,'柏レイソル':50,'FC東京':60,'東京ヴェルディ':30,'FC町田ゼルビア':50,'川崎フロンターレ':75,'横浜F・マリノス':65,'清水エスパルス':48,'名古屋グランパス':60,'京都サンガF.C.':40,'ガンバ大阪':62,'セレッソ大阪':45,'ヴィッセル神戸':75,'ファジアーノ岡山':22,'サンフレッチェ広島':60,'アビスパ福岡':30,'V・ファーレン長崎':35,'北海道コンサドーレ札幌':45,'ヴァンラーレ八戸':5,'ベガルタ仙台':25,'ブラウブリッツ秋田':8,'モンテディオ山形':18,'いわきFC':15,'栃木シティ':10,'RB大宮アルディージャ':30,'横浜FC':25,'湘南ベルマーレ':30,'ヴァンフォーレ甲府':18,'アルビレックス新潟':40,'カターレ富山':9,'ジュビロ磐田':45,'藤枝MYFC':8,'徳島ヴォルティス':18,'FC今治':12,'サガン鳥栖':30,'大分トリニータ':20,'テゲバジャーロ宮崎':7,'福島ユナイテッドFC':6,'栃木SC':10,'ザスパ群馬':7,'SC相模原':7,'松本山雅FC':20,'AC長野パルセイロ':8,'ツエーゲン金沢':10,'FC岐阜':9,'レイラック滋賀':5,'FC大阪':5,'奈良クラブ':6,'ガイナーレ鳥取':7,'レノファ山口FC':12,'カマタマーレ讃岐':6,'愛媛FC':10,'高知ユナイテッドSC':4,'ギラヴァンツ北九州':10,'ロアッソ熊本':12,'鹿児島ユナイテッドFC':10,'FC琉球':8};
+function baseRev(d){var X=lgx(d);return X.sp+X.att*.9*X.price*19/1e8+X.dist;}
+function revOf(name,d){return REVT[name]||baseRev(d);}
+function clubScale(name,d){return d>100?1:Math.max(.25,revOf(name,d)/baseRev(d));}
+function clubList(){var o=[];for(var d=1;d<=3;d++){parseDef(LEAGUE[d]).forEach(function(x){o.push({name:x.name,star:x.star,div:d,mgr:mgrByClub(x.name)});});}return o;}
+function renderClubSel(d){
+ S.clTab=d||S.clTab||1;var h='';
+ for(var k=1;k<=3;k++)h+='<button class="chip'+(k===S.clTab?' on':'')+'" data-cltab="'+k+'">J'+k+'</button>';
+ $('cl-tabs').innerHTML=h;
+ var L=clubList().filter(function(c){return c.div===S.clTab;}).sort(function(a,b){return b.star-a.star;});
+ h='';L.forEach(function(c){var rv=revOf(c.name,c.div);
+  h+='<button type="button" class="clrow" data-club="'+esc(c.name)+'"><b>'+esc(c.name)+'</b><span>'+starHTML(coreOf(c.star))+'</span><small>年間収入（推定）'+feeTxt(rv)+'　開始時の残高 '+feeTxt(r2(rv*.15))+'<br>監督：'+(c.mgr?esc(c.mgr.n)+'（'+c.mgr.form+'／'+TACJ[c.mgr.tac]+'）':'—')+'</small></button>';});
+ $('cl-list').innerHTML=h;
+}
+function startClub(name){
+ try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+ S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};S.euUsed={};buildPool();S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);
+ var c=null;S.pool.forEach(function(x){if(x.name===name)c=x;});if(!c)return;
+ S.pool.splice(S.pool.indexOf(c),1);
+ PASSES=DF().pass;S.phase=1;S.passes=0;S.started=true;S.trust=60;S.realStart=true;
+ S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||null;
+ if(!S.mgr){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;}
+ S.scale=clubScale(c.name,c.div);
+ S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.15);
+ S.rep={1:40,2:30,3:20}[c.div];
+ var rk=divClubs(c.div).filter(function(x){return x.st>c.st;}).length+1,n=divClubs(c.div).length+1;
+ S.target=rk<=3?'top':rk>n-5?'stay':'mid';
+ $('i-team').value=c.name;
+ gc('start');
+ endPhase();
+ $('sq-title').textContent=c.name+'の選手たち';
+ $('sq-sub').textContent=divName(c.div)+'からスタート。GMとして予算 '+feeTxt(S.money)+'（年間収入の見込み '+feeTxt(revOf(c.name,c.div))+'）でクラブを運営します。まずは布陣と戦術を決めましょう。';
+ $('btn-redraft').style.display='none';$('sq-warn').innerHTML='';
+ setTop(c.name);
+}
+document.addEventListener('click',function(e){
+ var t=e.target;if(!t.closest)return;
+ var tb=t.closest('[data-cltab]');if(tb){renderClubSel(+tb.getAttribute('data-cltab'));return;}
+ var cb=t.closest('[data-club]');if(cb){var nm=cb.getAttribute('data-club');ask(esc(nm)+'のGMとして始めますか？'+(readSave()?'<br>今のセーブデータは消えます。':''),'このクラブで始める',function(){startClub(nm);});return;}
+ if(t.closest('#btn-clback')){show('s-title');}
+ if(t.closest('#btn-draftmode')){var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(er){}S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+  if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
+});
 function aclReward(){
  var r=S.lastACL||'';
  if(!r)return null;
@@ -2116,7 +2176,7 @@ function updateBar(){
 }
 function kickoff(){
  if(S.midSeason){S.midSeason=false;resumeSeason();saveGame('season');return;}
- if(S.year===1)S.teamName=($('i-team').value||'あなたのクラブ').slice(0,14);
+ if(S.year===1&&!S.realStart)S.teamName=($('i-team').value||'あなたのクラブ').slice(0,14);
  buildSeason();$('se-log').innerHTML='';show('s-season');updateBar();
  saveGame('season');
  runTicker();
@@ -4247,7 +4307,8 @@ function showBye(kind){
 var SELDIFF='n';
 var DDESC={n:'原作どおりのバランス。見送り10回。',h:'見送り6回。ドラフトの約半分は実際の実力分布から出るので当たりが減る。AIクラブが少し強い。',l:'見送り3回。ドラフトの大半が実際の実力分布から出る。AIクラブが強い。'};
 (function(){var bs=document.querySelectorAll('#diffsel button');for(var i=0;i<bs.length;i++)bs[i].addEventListener('click',function(){SELDIFF=this.getAttribute('data-d');for(var j=0;j<bs.length;j++){bs[j].classList.toggle('on',bs[j]===this);bs[j].setAttribute('aria-pressed',bs[j]===this?'true':'false');}$('diffdesc').textContent=DDESC[SELDIFF];});})();
-$('btn-start').addEventListener('click',function(){
+$('btn-start').addEventListener('click',function(){show('s-club');renderClubSel(1);});
+$('btn-start-old')&&$('btn-start-old').addEventListener('click',function(){
  var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
  if(readSave())ask('今のセーブデータを消して、新しく始めますか？','新しく始める',go,true);else go();
 });
