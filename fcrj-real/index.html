@@ -1356,7 +1356,7 @@ function openSummer(){
  S.offSub='前半戦を'+divName(S.div)+' '+tableRank()+'位で折り返しました（'+S.w+'勝'+S.d+'分'+S.l+'敗）。夏の補強と引き抜きへの対応を決めます。';
  S.offGrowth='<li>後半戦は'+(S.rounds-S.round)+'試合。補強した選手はすぐに出場できます。</li>';
  var sev=Math.random()<.7?randomEvent('window'):null;if(sev)S.offGrowth+='<li>'+sev[0]+'</li>';S.offRetire='';S.offRetireN=0;
- S.offers=genOffers().slice(0,2);S.cands=[];S.picked=[];S.scoutLeft=1;S.scoutQ=null;
+ S.offers=genOffers().slice(0,2);S.cands=[];S.picked=[];S.scoutLeft=3;S.scoutQ=null;
  renderOffFromState();
  if(!S.offers.length)genCands();
  gemAnnounce();
@@ -3376,8 +3376,8 @@ function genOffers(){
  }
  // 中東（オイルマネー）
  var meC=(ACLD.west.SA.c+','+ACLD.west.AE.c+','+ACLD.west.QA.c).split(',');
- var me=S.squad.filter(function(p){return !used[p.id]&&p.age<=33&&p.ovr>=divAvg(S.div<=3?S.div:S.div)-4;}).sort(function(a,b){return b.ovr-a.ovr;});
- if(me.length&&Math.random()<(S.div===1||S.div>100?.5:.3)){var m0=me[rnd(Math.min(3,me.length))];used[m0.id]=1;
+ var sm=S.window==='summer',me=(S.div<=2||S.div>100)?S.squad.filter(function(p){if(used[p.id]||p.age>33)return false;var st=sm?p.s:p.ls;if(!st)return false;var k=sm?.5:1;return st.g>=12*k||st.a>=10*k||(p.pos==='GK'&&st.cs>=12*k)||(!sm&&(p.titles||[]).some(function(t){return t.indexOf(S.year-1+'年目')===0;}));}).sort(function(a,b){return b.ovr-a.ovr;}):[];
+ if(me.length&&Math.random()<.5){var m0=me[0];used[m0.id]=1;
   offers.push({p:m0,club:pick(meC),fromDiv:0,area:'me',tier:'ME',fee:r2(feeOf([.5,3],m0.ovr,70)*(4+Math.random()*4)*(S.div>100?4:1)),state:'open'});}
  // アジア
  var as=S.squad.filter(function(p){return !used[p.id]&&p.age>=25&&p.age<=33&&p.ovr>=62;});
@@ -3525,7 +3525,7 @@ function openOffseason0(){
  S.target=S.nextTarget||'stay';
  S.offTitle=$('o-title').textContent;S.offSub=$('o-sub').textContent;
  S.offGrowth=$('o-growth').innerHTML;S.offRetire=$('o-retire').innerHTML;S.offRetireN=ret.length;
- S.offers=genOffers();S.cands=[];S.picked=[];S.scoutLeft=1;S.scoutQ=null;
+ S.offers=genOffers();S.cands=[];S.picked=[];S.scoutLeft=3;S.scoutQ=null;
  renderOffFromState();
  if(!S.offers.length)genCands();
  saveGame('off');
@@ -3679,13 +3679,13 @@ function scoutRun(q){
  if(!res.length)return 0;
  var keep=(S.cands||[]).filter(function(p){return p.youth||p.alum||p.released;});
  S.cands=res.concat(keep);S.candTag=res.map(function(p){var f=style&&p.pos!=='GK'?fitOf(p,{tac:style}):-1;return '方針に合致：'+esc(p.rclub||'')+(f>=0?'　'+TACJ[style]+fitMark(f):'');}) .concat(keep.map(function(p){return p.released?'📋 戦力外：'+esc(p.rclub||'')+'（移籍金なし）':p.alum?'🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし）':'ユース昇格（移籍金なし）';}));
- S.picked=[];S.scoutLeft=0;S.scoutQ=q;
+ S.picked=[];S.scoutLeft=(S.scoutLeft==null?3:S.scoutLeft)-1;S.scoutQ=q;
  renderCands();saveGame('off');
  return res.length;
 }
 function scoutHTML(){
- var q=S.scoutQ||scoutDefault(),left=S.scoutLeft==null?1:S.scoutLeft;
- var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">'+(left>0?'条件に合う実在選手をリストアップします。<b>移籍期間ごとに1回だけ</b>で、やり直しはできません。':'この移籍期間の獲得方針は決定済みです。')+'残高 '+moneyTxt(S.money||0)+'</p>';
+ var q=S.scoutQ||scoutDefault(),left=S.scoutLeft==null?3:S.scoutLeft;
+ var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">'+(left>0?'条件に合う実在選手をリストアップします。'+(left===3?'<b>やり直しは2回まで</b>です。':'やり直しはあと<b>'+left+'回</b>です。'):'この移籍期間の獲得方針は決定済みです（やり直しの回数を使い切りました）。')+'残高 '+moneyTxt(S.money||0)+'</p>';
  var R=scoutRules(),lim=[];if(!R.big5)lim.push('欧州5大リーグの選手はJ1で監督評価50以上から交渉できます');if(!R.eu)lim.push('欧州その他の選手はJ1、またはJ2で監督評価60以上から');if(!R.jpab)lim.push('海外組の日本人はJ2以上、または監督評価40以上から');
  if(lim.length)h+='<p class="sub" style="margin:0 0 6px;font-size:11px">'+lim.join('。')+'。</p>';
  h+='<label>移籍金の上限（億円）<input type="number" id="sc-fee" min="0" step="0.1" value="'+q.fee+'"></label>';
@@ -3694,7 +3694,7 @@ function scoutHTML(){
  for(var t in TACJ)h+='<option value="'+t+'"'+(q.style===t?' selected':'')+'>'+TACJ[t]+'</option>';h+='</select></label>';
  h+='<label>年齢<select id="sc-age">'+[[0,'指定なし'],[23,'23歳以下'],[27,'27歳以下'],[30,'30歳以下']].map(function(a){return '<option value="'+a[0]+'"'+(q.age===a[0]?' selected':'')+'>'+a[1]+'</option>';}).join('')+'</select></label>';
  h+='<div class="scpos" role="group" aria-label="ポジション">'+POSL.map(function(p){var on=q.pos.indexOf(p)>-1;return '<button type="button" class="'+(on?'on':'')+'" data-scpos="'+p+'" aria-pressed="'+on+'">'+p+'</button>';}).join('')+'</div>';
- h+='<button class="btn small" id="btn-scout"'+(left<=0?' disabled':'')+'>'+(left<=0?'獲得方針は決定済み':'この方針で決定してリストアップ')+'</button></div>';
+ h+='<button class="btn small" id="btn-scout"'+(left<=0?' disabled':'')+'>'+(left<=0?'獲得方針は決定済み':left===3?'この方針でリストアップ':'方針を変えてやり直す（あと'+left+'回）')+'</button></div>';
  return h;
 }
 function scoutRead(){var q=S.scoutQ||scoutDefault();return {fee:Math.max(0,parseFloat($('sc-fee').value)||0),reg:$('sc-reg').value,style:$('sc-style').value,age:parseInt($('sc-age').value,10)||0,pos:(q.pos||[]).slice()};}
