@@ -1368,6 +1368,10 @@ document.addEventListener('click',function(e){
  else if(t.closest('[data-hire]')){var b=t.closest('[data-hire]');var nm=b.getAttribute('data-hire'),c=+b.getAttribute('data-cost'),f=b.getAttribute('data-from');
   ask(esc(nm)+'を監督に招へいしますか？<br>就任費用 '+feeTxt(c)+'（今の監督への違約金を含む）','招へいする',function(){hireMgr(nm,c,f);});}
 });
+function loanable(p){return !p.youth&&!p.alum&&!p.released&&!p.prospect&&!p.legend&&feeOfP(p)>0&&(p.real!=null||p.eu!=null||p.os!=null);}
+function loanFee(p){return r2(Math.max(.02,feeOfP(p)*.12));}
+function pickFee(p){return p.loanIn?loanFee(p):feeOfP(p);}
+function loanTxt(p){return 'レンタル料 '+feeTxt(loanFee(p))+'・'+(S.window==='summer'?'今季終了まで':'1シーズン')+'・年俸は全額負担';}
 function candMoney(p){var fe=feeOfP(p),fi=fitOf(p);
  return '<div class="candmoney">'+(p.nego==='ok'?'✅ 本人合意ずみ　':'本人の移籍意思 <b>'+accTxt(p)+'</b>　')+'移籍金 <b>'+feeTxt(fe)+'</b>　年俸 '+feeTxt(r2(salOf(p)*divPay()))+(fi>=0?'　監督の戦術（'+TACJ[S.mgr.tac]+'）に <b class="fit'+fi+'">'+fitMark(fi)+'</b>':'')+'</div>';}
 function tableRank(){var t=table();for(var i=0;i<t.length;i++)if(t[i].me)return i+1;return 0;}
@@ -1418,7 +1422,7 @@ function loanOpts(p){
  return cs.slice(0,6).map(function(c){var d=p.ovr-(c.st+ (c.div>100?0:-4));return {c:c,pt:d>=2?2:d>=-4?1:0};});
 }
 function loanOut(id){
- var p=playerById(id);if(!p)return;S.loanSel={id:id,dur:p.age<=21?2:1,k:0};renderLoanPanel();
+ var p=playerById(id);if(!p)return;if(p.loanIn){note(esc(p.name)+'はレンタル加入中のため、ほかのクラブへは出せません。');return;}S.loanSel={id:id,dur:p.age<=21?2:1,k:0};renderLoanPanel();
  var el=$('o-loanpanel');if(el)el.scrollIntoView({block:'center'});
 }
 function renderLoanPanel(){
@@ -3519,6 +3523,7 @@ function genOffers(){
   offers.push({p:v0,club:Math.random()<.4?pick(ASIA.cA):lowName(),fromDiv:0,area:'out',tier:'OUT',
    fee:feeOf([.1,.5],v0.ovr,65),state:'open'});
  }
+ offers=offers.filter(function(o){return !o.p.loanIn;});
  for(i=0;i<offers.length;i++)offers[i].lv=offers[i].area==='me'?'lo':stayLevel(offers[i].p,offers[i]);
  return offers;
 }
@@ -3573,6 +3578,8 @@ function renderOffSquad(){
   if(rp.pos!==rcur){rh+='<li class="rhead"><span class="rp">'+POSJ[rp.pos]+'</span><span>'+POSNAME[rp.pos]+'</span><span></span></li>';rcur=rp.pos;}
   rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small>'+(rp.age<=27?'<button type="button" class="loanbtn" data-loan="'+rp.id+'">レンタルに出す</button>':'')+(S.realStart?' <button type="button" class="loanbtn" data-rel="'+rp.id+'">契約解除</button>':'')+'</span><span class="rv">'+rp.ovr+'</span></li>';
  }
+ var lin=S.squad.filter(function(p){return p.loanIn;});
+ rh+=lin.length?'<li class="rhead"><span class="rp"></span><span>レンタル加入中：'+lin.map(function(p){return esc(p.name)+'（'+esc(p.loanIn.club||'')+'から・'+(p.loanIn.back||S.year+1)+'年目のオフに復帰）';}).join('、')+'</span><span></span></li>':'';
  $('o-squad').innerHTML=rh+((S.loans||[]).length?'<li class="rhead"><span class="rp"></span><span>レンタル中：'+S.loans.map(function(L){return esc(L.p.name)+'（'+esc(L.club)+'・'+L.back+'年目に復帰）';}).join('、')+'</span><span></span></li>':'');
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
 }
@@ -3594,6 +3601,7 @@ function openOffseason(){S.univNote='';openOffseason0();if(S.univNote){S.offGrow
  var nc=newCoaches(2),mn=aiMgrChanges('winter');
  if(nc.length||mn.length){S.offGrowth=(S.offGrowth||'')+(mn.length?'<li>📰 監督人事：'+mn.slice(0,8).join('／')+(mn.length>8?' ほか'+(mn.length-8)+'件':'')+'</li>':'')+(nc.length?'<li>🎓 現役を退いた'+nc.map(esc).join('、')+'が監督として指導者の道へ。</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  S.mgrListIds=null;
+ if(S.loanInBack&&S.loanInBack.length){S.offGrowth=(S.offGrowth||'')+'<li>🔁 レンタル期間満了：'+S.loanInBack.map(esc).join('、')+'が保有元へ戻りました。</li>';$('o-growth').innerHTML=S.offGrowth;S.loanInBack=[];}
  coachPhase();gemAnnounce();awakenAnnounce();}
 function openOffseason0(){
  var moved=S.pendingMove||0;
@@ -3604,6 +3612,7 @@ function openOffseason0(){
  S.year++;
  ageSquad();
  S.holes=[];S.comp=0;S.compFee=0;S.departed=[];S.returns=[];
+ S.loanInBack=[];for(var lj=S.squad.length-1;lj>=0;lj--){var lp=S.squad[lj];if(lp.loanIn&&lp.loanIn.back&&S.year>=lp.loanIn.back){S.squad.splice(lj,1);var lsi=S.slots.indexOf(lp.id);if(lsi>-1)S.slots[lsi]=null;S.holes.push(lp.pos);S.loanInBack.push(lp.name+'（'+lp.loanIn.club+'へ）');if(lp.real!=null&&S.realUsed)delete S.realUsed[lp.real];if(lp.eu!=null&&S.euUsed)delete S.euUsed[lp.eu];if(lp.os!=null&&S.osUsed)delete S.osUsed['jp'+lp.os];delete usedNames[lp.name];}}
  if(S.loans&&S.loans.length){
   for(var li=S.loans.length-1;li>=0;li--){
    var L=S.loans[li];
@@ -3928,10 +3937,10 @@ function renderCands(){
  for(i=0;i<S.cands.length;i++){
   var pk=S.picked.indexOf(i)>-1;
   h+='<div class="cand'+(pk?' picked':'')+'" data-i="'+i+'">'+(S.candTag[i]?'<div class="counter" style="margin:0 0 6px">'+S.candTag[i]+'</div>':'')
-   +cardHTML(S.cands[i])+candMoney(S.cands[i])+'<button class="btn '+(pk?'':'ghost ')+'small" data-pick="'+i+'">'+(pk?'獲得ずみ ・ タップで取り消し':'獲得する')+'</button></div>';
+   +cardHTML(S.cands[i])+candMoney(S.cands[i])+'<button class="btn '+(pk?'':'ghost ')+'small" data-pick="'+i+'">'+(pk?(S.cands[i].loanIn?'レンタルで':'')+'獲得ずみ ・ タップで取り消し':'獲得する')+'</button>'+(!pk&&loanable(S.cands[i])?'<button class="btn ghost small" data-lpick="'+i+'" style="margin-top:6px">レンタルで獲得（'+loanTxt(S.cands[i])+'）</button>':'')+'</div>';
  }
  $('o-cands').innerHTML=h;
- S.cands.forEach(function(p,k){if(p.nego==='no'){var bb=document.querySelector('[data-pick="'+k+'"]');if(bb){bb.disabled=true;bb.textContent='本人が移籍を拒否';}}});
+ S.cands.forEach(function(p,k){if(p.nego==='no'){var bb=document.querySelector('[data-pick="'+k+'"]');if(bb){bb.disabled=true;bb.textContent='本人が移籍を拒否';}var lb=document.querySelector('[data-lpick="'+k+'"]');if(lb)lb.remove();}});
  if(S.realStart){$('o-cand-sub').textContent='候補'+S.cands.length+'人。獲得人数に上限はありません（予算の範囲で何人でも獲得できます）。もう一度タップすれば取り消せます。';}
  else $('o-cand-sub').textContent='候補'+S.cands.length+'人（'+divName(S.div)+'枠'+(S.candBase||3)+'人'
   +(S.holes.length?'＋穴埋め'+S.holes.length+'人':'')+'）から最大'+S.cap+'人まで。'
@@ -3945,7 +3954,7 @@ function renderCands(){
 function updateCandCount(){
  var n=S.picked.length,rel=n-S.holes.length;
  $('o-count').textContent='獲得 '+n+(S.realStart?'人':' / '+S.cap)+(S.minPick?'（最低'+S.minPick+'人）':'');
- var cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
+ var cost=r2(S.picked.reduce(function(s,k){return s+pickFee(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
  $('btn-tolist').disabled=n<S.minPick||over;
  $('o-count').textContent+='　移籍金 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0);
  $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
@@ -3988,7 +3997,7 @@ function updateReleaseCount(){
 }
 function startNextSeason(){
  if(S.natCoach&&S.natPending){natConfirm((S.natSel&&S.natSel.length===NATN)?S.natSel.slice():natAuto());}
- var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0));
+ var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+pickFee(S.cands[k]);},0));
  S.money=r2((S.money||0)-cost);S.buyCost=r2((S.buyCost||0)+cost);
  startNextSeason0();
  if(S.oxR!=null)S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1);});
@@ -3999,6 +4008,7 @@ function startNextSeason0(){
  for(i=0;i<S.releasing.length;i++)
   for(j=0;j<S.squad.length;j++)if(S.squad[j].id===S.releasing[i]){S.squad.splice(j,1);break;}
  for(i=0;i<S.picked.length;i++){var np=S.cands[S.picked[i]];np.joined=S.year;np.route=np.prospect?np.univ+'から特別指定':S.year+'年目のオフに獲得';S.squad.push(np);
+  if(np.loanIn){np.loanIn={club:np.rclub||'保有元',back:S.year+1};np.route=(np.rclub||'')+'から期限付き移籍（レンタル）';}
   if(np.alum){np.alum=false;}
   if(np.youth){np.youth=false;np.route='ユースから昇格';S.youth=(S.youth||[]).filter(function(q){return q!==np;});}
   if(np.real!=null){S.realUsed[np.real]=1;realFree(np.name);}if(np.eu!=null){S.euUsed=S.euUsed||{};S.euUsed[np.eu]=1;}if(np.os!=null){S.osUsed=S.osUsed||{};S.osUsed['jp'+np.os]=1;}}
@@ -4433,15 +4443,21 @@ $('r-logyear').addEventListener('change',function(){renderLog(parseInt(this.valu
 $('o-cands').addEventListener('click',function(e){
  var b=e.target.closest?e.target.closest('[data-pick]'):null;if(!b)return;
  var i=parseInt(b.getAttribute('data-pick'),10),at=S.picked.indexOf(i),box=b.parentNode;
- if(at>-1){S.picked.splice(at,1);box.classList.remove('picked');b.textContent='獲得する';b.className='btn ghost small';}
+ if(at>-1){S.picked.splice(at,1);S.cands[i].loanIn=false;renderCands();saveGame('off');return;}
  else{if(S.picked.length>=S.cap)return;
   var cp=S.cands[i];if(cp.nego==='no')return;
   if(!cp.nego){cp.nego=Math.random()<accP(cp)?'ok':'no';if(cp.nego==='no'){renderCands();saveGame('off');note(esc(cp.name)+'は移籍を断りました。'+(lvOfPlayer(cp)>myLv()?'今いるリーグより格下のクラブには行きたくないようです。':'出場機会やクラブの将来性に納得できなかったようです。'));return;}}
-  S.picked.push(i);box.classList.add('picked');b.textContent='獲得ずみ ・ タップで取り消し';b.className='btn small';}
+  cp.loanIn=false;S.picked.push(i);box.classList.add('picked');var lb0=box.querySelector('[data-lpick]');if(lb0)lb0.remove();b.textContent='獲得ずみ ・ タップで取り消し';b.className='btn small';}
  updateCandCount();
  saveGame('off');
 });
 $('btn-tolist').addEventListener('click',openRelease);
+$('o-cands').addEventListener('click',function(e){
+ var b=e.target.closest?e.target.closest('[data-lpick]'):null;if(!b)return;
+ var i=parseInt(b.getAttribute('data-lpick'),10),cp=S.cands[i];if(!cp||S.picked.indexOf(i)>-1||cp.nego==='no')return;
+ if(!cp.nego){cp.nego=Math.random()<Math.min(.95,accP(cp)+.1)?'ok':'no';if(cp.nego==='no'){renderCands();saveGame('off');note(esc(cp.name)+'はレンタルでの移籍も断りました。');return;}}
+ cp.loanIn=true;S.picked.push(i);renderCands();saveGame('off');
+});
 $('o-retire').addEventListener('click',function(e){
  var b=e.target.closest?e.target.closest('[data-ret]'):null;if(!b)return;
  showRetireCard(parseInt(b.getAttribute('data-ret'),10));
