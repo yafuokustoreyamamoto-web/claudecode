@@ -3794,9 +3794,11 @@ function scoutRun(q){
   res.push(p);
  }
  if(!res.length)return 0;
- var keep=(S.cands||[]).filter(function(p){return p.youth||p.alum||p.released;});
+ var pk=(S.picked||[]).map(function(k){return {p:S.cands[k],t:S.candTag[k]};}).filter(function(o){return o.p;}),pset=pk.map(function(o){return o.p;});
+ var keep=(S.cands||[]).filter(function(p){return (p.youth||p.alum||p.released)&&pset.indexOf(p)<0;});
  S.cands=res.concat(keep);S.candTag=res.map(function(p){var f=style&&p.pos!=='GK'?fitOf(p,{tac:style}):-1;return '方針に合致：'+esc(p.rclub||'')+(f>=0?'　'+TACJ[style]+fitMark(f):'');}) .concat(keep.map(function(p){return p.released?'📋 戦力外：'+esc(p.rclub||'')+'（移籍金なし）':p.alum?'🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし）':'ユース昇格（移籍金なし）';}));
- S.picked=[];S.scoutLeft=(S.scoutLeft==null?3:S.scoutLeft)-1;S.scoutQ=q;
+ S.cands=pset.concat(S.cands);S.candTag=pk.map(function(o){return '✅ 獲得予定'+(o.t?'　'+o.t.replace(/^✅ 獲得予定　?/,''):'');}).concat(S.candTag);
+ S.picked=pset.map(function(p,k){return k;});S.scoutLeft=(S.scoutLeft==null?3:S.scoutLeft)-1;S.scoutQ=q;
  renderCands();saveGame('off');
  return res.length;
 }
