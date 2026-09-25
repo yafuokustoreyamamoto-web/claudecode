@@ -424,7 +424,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
 <section class="screen" id="s-club">
   <div class="sec">
     <h2>クラブを選ぶ</h2>
-    <p class="sub">GMとして率いるクラブを選びます。実在の選手20人と監督を引き継ぎ、そのカテゴリからスタートします。年間収入は実際のクラブの規模をもとにした推定値です。</p>
+    <p class="sub">GMとして率いるクラブを選びます。実在の選手20人と監督を引き継ぎ、そのカテゴリからスタートします。年間収入は実際のクラブの規模に合わせています。</p>
     <div class="chips" id="cl-tabs"></div>
     <div class="cllist" id="cl-list"></div>
     <button class="btn ghost small" id="btn-clback" style="margin-top:12px">戻る</button>
@@ -1284,7 +1284,7 @@ function mgrSal(m){return r2(.1+.25*Math.pow(m.r,1.5));}
 function mgrByClub(name){for(var i=0;i<REAL.M.length;i++)if(REAL.M[i][7]===name)return mgrObj(REAL.M[i]);return null;}
 function freeMgrs(){var u={};(S.pool||[]).forEach(function(c){if(c.mgr)u[c.mgr.n]=1;});if(S.mgr)u[S.mgr.n]=1;return REAL.M.map(mgrObj).filter(function(m){return !u[m.n];});}
 function stars(r){var n=Math.round(r);return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n);}
-function mgrLine(m){return esc(m.n)+'（'+(m.nj||'日本')+'・'+m.age+'歳）'+stars(m.r)+'　得意：'+m.form+'／'+TACJ[m.tac]+(m.est?'（推定）':'');}
+function mgrLine(m){return esc(m.n)+'（'+(m.nj||'日本')+'・'+m.age+'歳）'+stars(m.r)+'　得意：'+m.form+'／'+TACJ[m.tac];}
 function fitOf(p,m){m=m||S.mgr;if(!m||!p||p.pos==='GK')return -1;var k=TACK[m.tac],s=0,a=0,i;for(i=0;i<k.length;i++)s+=ab(p,k[i]);s/=k.length;for(i=0;i<AB.length;i++)a+=ab(p,AB[i]);a/=AB.length;var d=s-a;return d>=4?2:d>=0?1:0;}
 function fitMark(v){return v<0?'':['△','○','◎'][v];}
 function mgrMul(lu){var m=S.mgr;if(!m)return 1;var v=1+(m.r-2)*.01+(S.form===m.form?.01:0)+(S.tac===m.tac?.015:0),n=0,f=0;
@@ -1467,7 +1467,7 @@ function renderClubSel(d){
  $('cl-tabs').innerHTML=h;
  var L=clubList().filter(function(c){return c.div===S.clTab;}).sort(function(a,b){return b.star-a.star;});
  h='';L.forEach(function(c){var rv=revOf(c.name,c.div);
-  h+='<button type="button" class="clrow" data-club="'+esc(c.name)+'"><b>'+esc(c.name)+'</b><span>'+starHTML(coreOf(c.star))+'</span><small>年間収入（推定）'+feeTxt(rv)+'　開始時の残高 '+feeTxt(r2(rv*.15))+'<br>監督：'+(c.mgr?esc(c.mgr.n)+'（'+c.mgr.form+'／'+TACJ[c.mgr.tac]+'）':'—')+'</small></button>';});
+  h+='<button type="button" class="clrow" data-club="'+esc(c.name)+'"><b>'+esc(c.name)+'</b><span>'+starHTML(coreOf(c.star))+'</span><small>年間収入'+feeTxt(rv)+'　開始時の残高 '+feeTxt(r2(rv*.15))+'<br>監督：'+(c.mgr?esc(c.mgr.n)+'（'+c.mgr.form+'／'+TACJ[c.mgr.tac]+'）':'—')+'</small></button>';});
  $('cl-list').innerHTML=h;
 }
 function startClub(name){
