@@ -71,6 +71,11 @@ p{margin:0 0 .8em;}
 .diffsel button{flex:1;padding:10px 4px;border:1.5px solid var(--line);border-radius:3px;background:transparent;color:var(--chalk);font:inherit;font-weight:700;cursor:pointer;}
 .diffsel button.on{background:var(--amber);border-color:var(--amber);color:var(--ink);}
 .diffsel button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+.coachcard{border:1.5px solid var(--line);border-radius:3px;padding:12px;margin-top:10px;}
+.coachcard b.cn{font-size:17px;}
+.coachcard .btnrow{display:flex;gap:8px;margin-top:10px;}
+.coachcard .btnrow .btn{padding:10px;}
+.natlog{margin:8px 0 0;padding-left:1.1em;}
 .btn.ghost{background:transparent;color:var(--chalk);border:1.5px solid var(--line);}
 .btn.small{padding:11px;font-size:14px;}
 .btn:active{transform:translateY(1px);}
@@ -364,7 +369,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
     <li>J3は21クラブ・40節、J2とJ1は20クラブ・38節。上位2クラブが<b>自動昇格</b>、<b>3〜6位はプレーオフ</b></li>
     <li>シーズン中に<b>天皇杯</b>と<b>Jリーグカップ</b>も並行して戦う</li>
     <li>オフには<b>引退</b>や<b>引き抜き</b>が起き、<b>獲得候補</b>から補強する。毎年1歳ずつ年を取る</li>
-    <li>毎年の<b>目標</b>に届かずフロントの信頼を失うと<b>解任</b>。途中で閉じても<b>自動でセーブ</b>されます</li>
+    <li>結果を残すと<b>監督評価</b>が上がり、<b>ほかのクラブ</b>や<b>日本代表</b>から監督オファーが届く（解任はなし）。途中で閉じても<b>自動でセーブ</b>されます</li>
   </ol>
   <div id="t-cont" style="display:none">
     <button class="btn cta" id="btn-continue">つづきから</button>
@@ -519,6 +524,10 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
     <p class="sub" id="o-sub">1年が過ぎ、全員が1歳年を取りました。</p>
     <div id="o-target"></div>
     <ul class="growth" id="o-growth"></ul>
+  </div>
+  <div class="sec" id="o-coach-sec" style="display:none">
+    <h2>監督オファー・日本代表</h2>
+    <div id="o-coach"></div>
   </div>
   <div class="sec" id="o-retire-sec" style="display:none">
     <h2>引退</h2>
@@ -916,8 +925,8 @@ function rclubName(i){return REAL.clubs[i];}
 function offs(pos){var w=W[pos],d=D[pos],s=0;for(var k in w)s+=w[k]*d[k];return s;}
 function baseT(p){return p.ovr-offs(p.pos);}
 var DIFFS={n:{name:'ノーマル',pass:10,bonus:-1,real:0,ai:0,trust:1,t0:60},
- h:{name:'ハード',pass:6,bonus:-2,real:.45,ai:1.5,trust:1.3,t0:55},
- l:{name:'レジェンド',pass:3,bonus:-3,real:.75,ai:3,trust:1.7,t0:40}};
+ h:{name:'ハード',pass:6,bonus:-2,real:.45,ai:1.5,trust:1,t0:60},
+ l:{name:'レジェンド',pass:3,bonus:-3,real:.75,ai:3,trust:1,t0:60}};
 function DF(){return DIFFS[S.diff]||DIFFS.n;}
 function realStats(p,t,atk){
  var st={},i,pos=p.pos,pos2=p.pos2,pos3=p.pos3;
@@ -996,6 +1005,107 @@ function makePlayer(bonus,forcePos,forceAge){
  realFree(p.name);
  return p;
 }
+function squadStr(){var a=S.squad.map(function(p){return p.ovr;}).sort(function(x,y){return y-x;}).slice(0,14);return a.length?a.reduce(function(s,v){return s+v;},0)/a.length:70;}
+function japanPool(){
+ var v=[],i,P=REAL.P;
+ for(i=0;i<P.length;i++)if(!P[i][8])v.push([P[i][0],P[i][6]]);
+ REALOS.JP.forEach(function(r){v.push([r[0],72+r[5]*18]);});
+ S.squad.forEach(function(p){if(!p.foreign)v.push([p.name,baseT(p)]);});
+ v.sort(function(a,b){return b[1]-a[1];});
+ var seen={},o=[];for(i=0;i<v.length&&o.length<23;i++){if(seen[v[i][0]])continue;seen[v[i][0]]=1;o.push(v[i]);}
+ return o;
+}
+function natYear(){
+ var y=S.year,kind=y%4===0?'W杯':y%4===2?'アジアカップ':'親善試合・予選';
+ var sq=japanPool(),str=sq.slice(0,16).reduce(function(s,x){return s+x[1];},0)/16+(S.rep||0)/25;
+ function sg(x){return 1/(1+Math.exp(-x));}
+ var res='',dl=0,mine=sq.filter(function(x){return S.squad.some(function(p){return p.name===x[0];});}).length;
+ if(kind==='親善試合・予選'){var w=0;for(var k=0;k<6;k++)if(Math.random()<sg((str-80)/3))w++;res='6試合 '+w+'勝';dl=w>=5?3:w>=3?1:-2;}
+ else{
+  var st=kind==='W杯'?['グループステージ敗退','ベスト32','ベスト16','ベスト8','ベスト4','準優勝','優勝']:['グループステージ敗退','ベスト16','ベスト8','ベスト4','準優勝','優勝'];
+  var base=kind==='W杯'?84:78,lv=0;
+  for(var s2=0;s2<st.length-1;s2++){if(Math.random()<sg((str-(base+s2*1.6))/2.6))lv++;else break;}
+  res=st[lv];var gain=kind==='W杯'?[-4,0,3,7,11,15,22]:[-5,-2,2,5,8,12];dl=gain[lv];
+ }
+ S.rep=clamp((S.rep||0)+dl,0,100);
+ S.natLog=S.natLog||[];
+ S.natLog.push({y:y,k:kind,r:res,dl:dl,top:sq.slice(0,5).map(function(x){return x[0];}),mine:mine});
+}
+function coachPhase(){
+ S.coachOffers=[];
+ if(S.natCoach)natYear();
+ var rep=S.rep||0;
+ if(!S.natCoach&&rep>=80&&S.div===1)S.coachOffers.push({kind:'nat',name:'日本代表'});
+ if(rep>=40&&Math.random()<.75){
+  var my=squadStr(),lim=rep>=70?1:rep>=55?1.5:2;
+  var cs=S.pool.filter(function(c){
+   if(c.div<1||c.div>3)return false;
+   if(rep<55&&c.div===1)return false;
+   if(lim===1.5&&c.div===1&&c.st>divAvg(1)+1.5)return false;
+   return c.div<S.div||(c.div===S.div&&c.st>my-6);
+  }).sort(function(a,b){return b.st-a.st;});
+  var n=rep>=65?2:1,top=cs.slice(0,6);
+  shuffle(top);
+  for(var i=0;i<Math.min(n,top.length);i++)S.coachOffers.push({kind:'club',cid:top[i].id,name:top[i].name,div:top[i].div});
+ }
+ renderCoach();saveGame('off');
+}
+function renderCoach(){
+ var h='',nl=S.natLog&&S.natLog.length?S.natLog[S.natLog.length-1]:null;
+ if(S.natCoach&&nl&&nl.y===S.year){
+  h+='<div class="coachcard"><b class="cn">🇯🇵 日本代表（兼任）</b><p class="sub" style="margin:4px 0 0">'+nl.k+'：<b style="color:var(--amber)">'+nl.r+'</b>　監督評価 '+(nl.dl>0?'+':'')+nl.dl+'</p>'
+   +'<p class="sub" style="margin:4px 0 0;font-size:12px">主な招集：'+nl.top.map(esc).join('、')+(nl.mine?'　ほか自クラブから'+nl.mine+'人':'')+'</p></div>';
+ }
+ (S.coachOffers||[]).forEach(function(o,i){
+  var desc=o.kind==='nat'?'クラブとの兼任で日本代表を指揮します。毎年オフに代表活動（W杯・アジアカップ・親善試合）の結果が出て、監督評価に反映されます。'
+   :divName(o.div)+'のクラブです。受けると、今の選手たちとは別れ、'+esc(o.name)+'の実在選手を率いて来季を戦います。今のクラブはAIクラブとして残ります。';
+  h+='<div class="coachcard"><b class="cn">'+esc(o.name)+'</b> <span class="tag gold">'+(o.kind==='nat'?'代表監督オファー':'監督オファー')+'</span>'
+   +'<p class="sub" style="margin:6px 0 0">'+desc+'</p><div class="btnrow"><button class="btn cta" data-cacc="'+i+'">就任する</button><button class="btn ghost" data-cdec="'+i+'">断る</button></div></div>';
+ });
+ $('o-coach').innerHTML=h;
+ $('o-coach-sec').style.display=h?'block':'none';
+}
+function clubSquad(c){
+ var ci=c.rc,P=REAL.P,list=[],i,out=[];
+ if(ci!=null)for(i=0;i<P.length;i++)if(P[i][1]===ci&&!S.realUsed[i])list.push(i);
+ list.sort(function(a,b){return P[b][6]-P[a][6];});
+ var gk=list.filter(function(i){return P[i][3]==='GK';}).slice(0,2),rest=list.filter(function(i){return P[i][3]!=='GK';});
+ var pickI=gk.concat(rest).slice(0,SQUAD);
+ pickI.forEach(function(ri){
+  var r=P[ri],p=makePlayer0(0);S.realUsed[ri]=1;
+  delete usedNames[p.name];p.name=r[0];usedNames[p.name]=1;p.real=ri;p.rclub=rclubName(r[1]);
+  p.age=r[2];p.pos=r[3];p.pos2=r[4];p.pos3=r[4]?r[5]:'';p.foreign=!!r[8];p.nat=r[8]||'';
+  realStats(p,r[6],r[9]);p.pot=Math.max(p.ovr,p.ovr+(r[7]-r[6]));
+  p.joined=S.year;p.route=c.name+'（監督就任時に在籍）';p.orig=true;
+  out.push(p);
+ });
+ while(out.length<SQUAD){var q=makePlayer((3-c.div)*3.5,out.some(function(p){return p.pos==='GK';})?'':'GK');q.joined=S.year;q.route=c.name+'（監督就任時に在籍）';out.push(q);}
+ return out;
+}
+function coachAccept(i){
+ var o=S.coachOffers[i];if(!o)return;
+ if(o.kind==='nat'){S.natCoach=true;S.coachOffers.splice(i,1);S.careers=(S.careers||[]).concat([{y:S.year,c:'日本代表（兼任）'}]);renderCoach();saveGame('off');note('日本代表の監督に就任しました。来年のオフから代表活動の結果が届きます。');return;}
+ var c=null;S.pool.forEach(function(x){if(x.id===o.cid)c=x;});if(!c)return;
+ var oldName=S.teamName,oldDiv=S.div;
+ var star=clamp((squadStr()-8-59)/6,.5,5);
+ S.pool.push(newClub({name:oldName,star:star},oldDiv));
+ S.pool.splice(S.pool.indexOf(c),1);
+ S.teamName=c.name;S.div=c.div;
+ S.squad=clubSquad(c);
+ S.slots=[];S.offers=[];S.cands=[];S.picked=[];S.holes=[];S.releasing=[];S.loans=[];S.champStreak=0;S.lastChamp=false;S.aclEntry=null;
+ S.target=c.st>=divAvg(c.div)+1?'top':'mid';
+ S.careers=(S.careers||[]).concat([{y:S.year,c:c.name}]);
+ S.coachOffers=[];
+ S.offSub=oldName+'を離れ、'+c.name+'（'+divName(c.div)+'）の監督に就任しました。';
+ S.offGrowth='<li>'+esc(c.name)+'の選手'+S.squad.length+'人を引き継ぎました。</li>';S.offRetire='';S.offRetireN=0;
+ genCands();renderOffFromState();saveGame('off');
+}
+document.addEventListener('click',function(e){
+ var a=e.target.closest&&e.target.closest('[data-cacc]'),d=e.target.closest&&e.target.closest('[data-cdec]');
+ if(a){var i=+a.getAttribute('data-cacc'),o=S.coachOffers[i];
+  ask(o.kind==='nat'?'日本代表の監督を兼任しますか？':esc(o.name)+'の監督に就任しますか？<br>今のクラブの選手とはお別れです。','就任する',function(){coachAccept(i);});}
+ if(d){S.coachOffers.splice(+d.getAttribute('data-cdec'),1);renderCoach();saveGame('off');}
+});
 function aclReward(){
  var r=S.lastACL||'';
  if(!r)return null;
@@ -1159,7 +1269,7 @@ function buildSeason(){
 
 /* ============ ドラフト ============ */
 function startDraft(){
- PASSES=DF().pass;S.squad=[];S.phase=1;S.passes=PASSES;S.started=true;S.trust=DF().t0;S.target='mid';
+ PASSES=DF().pass;S.squad=[];S.phase=1;S.passes=PASSES;S.started=true;S.trust=60;S.rep=20;S.target='mid';
  gc('start');
  show('s-draft');nextPlayer();renderMeter();renderRoster();saveGame('draft');
 }
@@ -1289,7 +1399,7 @@ function openFormation(){
 }
 function targetHTML(label){
  return '<p class="sub" style="margin:10px 0 0">'+label+'の目標：<b style="color:var(--amber)">'+TGJ[S.target||'mid']+'</b>（'+tgDesc(S.target||'mid')+'）</p>'
-  +trustBar()+(S.trust<=35?'<div class="warn">フロントの信頼が揺らいでいます。'+label+'、目標に届かなければ解任の可能性があります。</div>':'');
+  +trustBar();
 }
 function renderProfile(){
  var pr=FORM[S.form].prof,t=TAC[S.tac],h='',k;
@@ -1663,7 +1773,7 @@ function updateBar(){
  $('se-gd').textContent=(gd>0?'+':'')+gd;
  $('se-rank').textContent=myRank()+'位';
  $('se-title').textContent=divName(S.div)+'　'+S.year+'年目　第'+S.round+'節 / '+S.rounds;
- $('se-target').textContent='今季の目標：'+TGJ[S.target||'mid']+'（'+tgDesc(S.target||'mid')+'）　信頼度 '+S.trust+'　難易度 '+DF().name;
+ $('se-target').textContent='今季の目標：'+TGJ[S.target||'mid']+'（'+tgDesc(S.target||'mid')+'）　監督評価 '+(S.rep||0)+'　難易度 '+DF().name;
  setTop(S.form+'／'+TAC[S.tac].name);
 }
 function kickoff(){
@@ -2363,8 +2473,9 @@ function nextTargetOf(moved,rank,n){
  return 'stay';
 }
 function trustBar(){
- var t=S.trust,c=t<=35?'#F09A8D':t<=60?'#FFC21A':'#7BE0A0';
- return '<div class="trust"><span>フロントの信頼</span><div class="bar"><i style="width:'+t+'%;background:'+c+'"></i></div><u>'+t+'</u></div>';
+ var t=S.rep||0,c=t>=80?'#7BE0A0':t>=55?'#FFC21A':'#F2F5EE';
+ return '<div class="trust"><span>監督評価</span><div class="bar"><i style="width:'+t+'%;background:'+c+'"></i></div><u>'+t+'</u></div>'
+  +'<p class="sub" style="margin:4px 0 0;font-size:11px">評価40でJ2・J3、55でJ1中堅、70でJ1上位のクラブから監督オファー。80を超えてJ1で指揮すると日本代表からも声がかかります。</p>';
 }
 function finalizeSeason(){
  var t=S.rows,rank=S.rank,n=t.length,moved=0,head,body;
@@ -2398,17 +2509,20 @@ function finalizeSeason(){
  var hon=[];if(rank===1)hon.push(divName(S.div)+'優勝');hon=hon.concat(cupT);
  if(hon.length)S.squad.forEach(function(q){if(q.s.app>0)q.hon.push(S.year+'年目 '+hon.join('・'));});
  var tg=S.target||'mid',ev=evalTarget(tg,rank,n,moved);
- var dl=ev>=1?25:ev===0?15:ev===-1?-30:-45;
- dl=dl<0?Math.round(dl*DF().trust):Math.round(dl/Math.sqrt(DF().trust));
- dl+=cupT.length*10+cupF*5;
- S.trust=clamp((S.trust==null?60:S.trust)+dl,0,100);
+ var dl=ev>=1?12:ev===0?7:ev===-1?-4:-8;
+ dl+=cupT.length*6+cupF*2;
+ if(rank===1)dl+=S.div===1?15:S.div===2?8:5;
+ if(moved===-1)dl+=6;
+ if(aclRes.indexOf('優勝')>-1)dl+=15;else if(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)dl+=6;
+ if(S.div===1&&dl>0)dl=Math.round(dl*1.2);
+ S.rep=clamp((S.rep==null?20:S.rep)+dl,0,100);
  if(aclRes.indexOf('優勝')>-1)dl+=20;else if(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)dl+=10;
  S.trust=clamp(S.trust+(aclRes.indexOf('優勝')>-1?20:(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)?10:0),0,100);
  S.history.push({year:S.year,div:S.div,rank:rank,pts:S.pts,note:note,tg:tg,ok:ev>=0,acl:aclRes});
  S.lastEval={tg:tg,ev:ev,dl:dl};
  S.lastChamp=champ;
  S.champStreak=champ?((S.champStreak||0)+1):0;
- S.fired=S.trust<=0;
+ S.fired=false;
  S.nextTarget=nextTargetOf(moved,rank,n);
  S.res={head:head,body:body,moved:moved,champ:champ,rank:rank,n:n};
  S.pendingMove=moved;S.lastRank=rank;
@@ -2580,7 +2694,7 @@ function renderResult(){
   +'<p>'+esc(S.teamName)+'　勝点'+S.pts+'（'+S.w+'勝'+S.d+'分'+S.l+'敗）　得失点'+((S.gf-S.ga)>0?'+':'')+(S.gf-S.ga)+'</p>'
   +(S.po&&!S.po.won&&S.div>1?'<p style="margin-top:8px">プレーオフ勝者：'+esc(S.po.winner)+'</p>':'')
   +'<p class="tgline">今季の目標：'+TGJ[le.tg]+'（'+tgDesc(le.tg)+'）→ '+(le.ev>=0?'<b style="color:#0a6b3a">達成</b>':'<b style="color:#b3321f">未達</b>')
-  +'　信頼度 '+(le.dl>0?'+':'')+le.dl+'</p>'
+  +'　監督評価 '+(le.dl>0?'+':'')+le.dl+'</p>'
   +(S.fired?'<p class="firedline">フロントの信頼を失い、監督を解任されました。</p>':'');
  $('r-trust').innerHTML=trustBar();
 
@@ -2992,7 +3106,8 @@ function renderOffSquad(){
  $('o-squad').innerHTML=rh;
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
 }
-function openOffseason(){
+function openOffseason(){openOffseason0();coachPhase();}
+function openOffseason0(){
  var moved=S.pendingMove||0;
  S.lastMoved=moved;
  aiPromotion();
@@ -3120,6 +3235,7 @@ function renderOffFromState(){
  renderOffers();renderOffSquad();
  if(S.cands&&S.cands.length)renderCands();else $('o-cand-sec').style.display='none';
  setTop(divName(S.div)+'　'+S.year+'年目');
+ renderCoach();
  show('s-off');
 }
 function genCands(){
@@ -3576,7 +3692,7 @@ function showBye(kind){
 
 /* ============ 配線 ============ */
 var SELDIFF='n';
-var DDESC={n:'原作どおりのバランス。見送り10回。',h:'見送り6回。ドラフトの約半分は実際の実力分布から出るので当たりが減る。AIクラブが少し強く、目標未達で信頼が大きく下がる。',l:'見送り3回。ドラフトの大半が実際の実力分布から出る。AIクラブが強く、信頼度40から始まるので1年目の失敗で解任もある。'};
+var DDESC={n:'原作どおりのバランス。見送り10回。',h:'見送り6回。ドラフトの約半分は実際の実力分布から出るので当たりが減る。AIクラブが少し強い。',l:'見送り3回。ドラフトの大半が実際の実力分布から出る。AIクラブが強い。'};
 (function(){var bs=document.querySelectorAll('#diffsel button');for(var i=0;i<bs.length;i++)bs[i].addEventListener('click',function(){SELDIFF=this.getAttribute('data-d');for(var j=0;j<bs.length;j++){bs[j].classList.toggle('on',bs[j]===this);bs[j].setAttribute('aria-pressed',bs[j]===this?'true':'false');}$('diffdesc').textContent=DDESC[SELDIFF];});})();
 $('btn-start').addEventListener('click',function(){
  var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();startDraft();};
