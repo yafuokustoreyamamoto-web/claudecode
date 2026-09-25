@@ -1230,7 +1230,7 @@ function clubSquad(c){
  if(ci!=null)for(i=0;i<P.length;i++)if(P[i][1]===ci&&!S.realUsed[i])list.push(i);
  list.sort(function(a,b){return P[b][6]-P[a][6];});
  var gk=list.filter(function(i){return P[i][3]==='GK';}).slice(0,2),rest=list.filter(function(i){return P[i][3]!=='GK';});
- var pickI=gk.concat(rest).slice(0,SQUAD);
+ var pickI=quotaPick(list,function(i){return P[i][3];},function(i){return P[i][6];});
  pickI.forEach(function(ri){
   var r=P[ri],p=makePlayer0(0);S.realUsed[ri]=1;
   delete usedNames[p.name];p.name=r[0];usedNames[p.name]=1;p.real=ri;p.rclub=rclubName(r[1]);
@@ -1239,7 +1239,7 @@ function clubSquad(c){
   p.joined=S.year;p.route=c.name+'（監督就任時に在籍）';p.orig=true;
   out.push(p);
  });
- while(out.length<SQUAD){var q=makePlayer((3-c.div)*3.5,out.some(function(p){return p.pos==='GK';})?'':'GK');q.joined=S.year;q.route=c.name+'（監督就任時に在籍）';out.push(q);}
+ while(out.length<SQUAD&&out.length<16){var q=makePlayer((3-c.div)*3.5,out.some(function(p){return p.pos==='GK';})?'':'GK');q.joined=S.year;q.route=c.name+'（監督就任時に在籍）';out.push(q);}
  return out;
 }
 function euSquad(c){
@@ -1247,8 +1247,8 @@ function euSquad(c){
  for(i=0;i<P.length;i++)if(P[i][1]===c.eu&&!S.euUsed[i])L.push(i);
  L.sort(function(a,b){return P[b][5]-P[a][5];});
  var gk=L.filter(function(i){return P[i][3]==='GK';}).slice(0,2),rest=L.filter(function(i){return P[i][3]!=='GK';});
- gk.concat(rest).slice(0,SQUAD).forEach(function(ei){var p=euPlayer(makePlayer0(0),ei,null);p.joined=S.year;p.route=c.name+'（GM就任時に在籍）';p.orig=true;out.push(p);});
- while(out.length<SQUAD){var q=makePlayer0(10,out.some(function(p){return p.pos==='GK';})?'':'GK');q.joined=S.year;out.push(q);}
+ quotaPick(L,function(i){return P[i][3];},function(i){return P[i][5];}).forEach(function(ei){var p=euPlayer(makePlayer0(0),ei,null);p.joined=S.year;p.route=c.name+'（GM就任時に在籍）';p.orig=true;out.push(p);});
+ while(out.length<SQUAD&&out.length<16){var q=makePlayer0(10,out.some(function(p){return p.pos==='GK';})?'':'GK');q.joined=S.year;out.push(q);}
  return out;
 }
 function coachAccept(i){
@@ -1259,7 +1259,7 @@ function coachAccept(i){
  var star=clamp((squadStr()-8-59)/6,.5,5);
  var oc=newClub({name:oldName,star:star},oldDiv);oc.mgr=S.mgr;S.pool.push(oc);
  S.pool.splice(S.pool.indexOf(c),1);
- S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.3:revOf(c.name,c.div)*.15)+(S.money>0?0:S.money));
+ S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.ub=1.04;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.3:revOf(c.name,c.div)*.15)+(S.money>0?0:S.money));
  S.squad=clubSquad(c);
  S.slots=[];S.offers=[];S.cands=[];S.picked=[];S.holes=[];S.releasing=[];S.loans=[];S.champStreak=0;S.lastChamp=false;S.aclEntry=null;
  S.target=c.st>=divAvg(c.div)+1?'top':'mid';
@@ -1476,7 +1476,7 @@ function startClub(name){
  var c=null;S.pool.forEach(function(x){if(x.name===name)c=x;});if(!c)return;
  S.pool.splice(S.pool.indexOf(c),1);
  PASSES=DF().pass;S.phase=1;S.passes=0;S.started=true;S.trust=60;S.realStart=true;
- S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||null;
+ S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||null;S.ub=1.04;
  if(!S.mgr){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;}
  S.scale=clubScale(c.name,c.div);
  S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.15);
@@ -1486,7 +1486,7 @@ function startClub(name){
  $('i-team').value=c.name;
  gc('start');
  endPhase();
- $('sq-title').textContent=c.name+'の選手たち';
+ $('sq-title').textContent=c.name+'の選手たち（'+S.squad.length+'人）';
  $('sq-sub').textContent=divName(c.div)+'からスタート。GMとして予算 '+feeTxt(S.money)+'（年間収入の見込み '+feeTxt(revOf(c.name,c.div))+'）でクラブを運営します。まずは布陣と戦術を決めましょう。';
  $('btn-redraft').style.display='none';$('sq-warn').innerHTML='';
  setTop(c.name);
@@ -1499,6 +1499,13 @@ document.addEventListener('click',function(e){
  if(t.closest('#btn-draftmode')){var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(er){}S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
   if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
 });
+var SQN=28,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
+function quotaPick(L,posOf,valOf){
+ var out=[],used={},cnt={};
+ L.slice().sort(function(a,b){return valOf(b)-valOf(a);}).forEach(function(i){var ps=posOf(i);if((cnt[ps]||0)<(QUOTA[ps]||0)){out.push(i);used[i]=1;cnt[ps]=(cnt[ps]||0)+1;}});
+ L.slice().sort(function(a,b){return valOf(b)-valOf(a);}).forEach(function(i){if(!used[i]&&out.length<SQN){out.push(i);used[i]=1;}});
+ return out.slice(0,SQN);
+}
 function aclReward(){
  var r=S.lastACL||'';
  if(!r)return null;
@@ -1965,7 +1972,7 @@ function aggUser(lu,raw){
   sd+=sh.def*defScore(o.p,am);wd+=sh.def;
   if(o.sp==='GK')gk=defScore(o.p,am);
  }
- var MM=mgrMul(lu);return {atk:(wa?sa/wa:55)*MM,mid:(wm?sm/wm:55)*MM,def:((wd?sd/wd:55)*.78+gk*.22)*MM,
+ var MM=mgrMul(lu)*(S.ub||1);return {atk:(wa?sa/wa:55)*MM,mid:(wm?sm/wm:55)*MM,def:((wd?sd/wd:55)*.78+gk*.22)*MM,
   prof:FORM[S.form].prof,tac:TAC[S.tac],tk:S.tac,lu:lu};
 }
 function aggAI(c){
