@@ -87,6 +87,16 @@ p{margin:0 0 .8em;}
 .mgrrow{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:3px;padding:8px;font-size:13px;}
 .mgrrow small{display:block;opacity:.8;font-size:11px;}
 .mgrrow .btn{width:auto;flex:none;padding:8px 12px;}
+.natcnt{margin:8px 0 0;font-size:13px;font-variant-numeric:tabular-nums;}
+.natlist{max-height:420px;overflow-y:auto;margin:10px 0;border:1px solid var(--line);border-radius:3px;}
+.natg{position:sticky;top:0;background:var(--pitch);color:var(--amber);font-weight:900;font-size:12px;padding:4px 8px;}
+.natp{display:grid;grid-template-columns:34px 1fr auto;grid-template-rows:auto auto;gap:0 8px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);color:var(--chalk);font:inherit;padding:6px 8px;cursor:pointer;}
+.natp span{grid-row:1/3;font-size:11px;opacity:.8;align-self:center;}
+.natp small{grid-column:2;font-size:11px;opacity:.7;}
+.natp u{grid-row:1/3;grid-column:3;text-decoration:none;font-weight:900;align-self:center;font-variant-numeric:tabular-nums;}
+.natp.on{background:rgba(255,194,26,.18);}
+.natp.on b{color:var(--amber);}
+.natp:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
 .btn.ghost{background:transparent;color:var(--chalk);border:1.5px solid var(--line);}
 .btn.small{padding:11px;font-size:14px;}
 .btn:active{transform:translateY(1px);}
@@ -1068,9 +1078,42 @@ function japanPool(){
  var seen={},o=[];for(i=0;i<v.length&&o.length<23;i++){if(seen[v[i][0]])continue;seen[v[i][0]]=1;o.push(v[i]);}
  return o;
 }
-function natYear(){
+var NATN=23;
+function natGroup(pos){return pos==='GK'?'GK':(pos==='CB'||pos==='SB')?'DF':(pos==='DM'||pos==='CM'||pos==='OM')?'MF':'FW';}
+function natCands(){
+ var v=[],i,P=REAL.P,mine={};
+ S.squad.forEach(function(p){if(!p.foreign){mine[p.name]=1;v.push({n:p.name,pos:p.pos,r:Math.round(baseT(p)),club:S.teamName+'（自クラブ）'});}});
+ for(i=0;i<P.length;i++)if(!P[i][8]&&!mine[P[i][0]])v.push({n:P[i][0],pos:P[i][3],r:P[i][6],club:REAL.clubs[P[i][1]]});
+ REALEU.P.forEach(function(r){if(r[6]==='JP')v.push({n:r[0],pos:r[3],r:r[5],club:REALEU.C[r[1]][0]});});
+ REALOS.JP.forEach(function(r){v.push({n:r[0],pos:r[1],r:Math.round(72+r[5]*18),club:r[4]});});
+ var seen={},o=[];v.sort(function(a,b){return b.r-a.r;});
+ v.forEach(function(x){if(seen[x.n])return;seen[x.n]=1;o.push(x);});
+ var by={GK:[],DF:[],MF:[],FW:[]};o.forEach(function(x){var g=natGroup(x.pos);if(by[g].length<{GK:6,DF:18,MF:18,FW:14}[g])by[g].push(x);});
+ return by.GK.concat(by.DF,by.MF,by.FW);
+}
+function natStrength(sel){
+ var by={GK:[],DF:[],MF:[],FW:[]};sel.forEach(function(x){by[natGroup(x.pos)].push(x.r);});
+ for(var k in by)by[k].sort(function(a,b){return b-a;});
+ var need={GK:1,DF:4,MF:4,FW:2},xi=[],pen=0,bench=[];
+ for(var g in need){for(var j=0;j<need[g];j++){if(by[g][j]!=null)xi.push(by[g][j]);else pen+=6;}bench=bench.concat(by[g].slice(need[g]));}
+ bench.sort(function(a,b){return b-a;});
+ var xiAvg=xi.length?xi.reduce(function(s,v){return s+v;},0)/xi.length:60,bAvg=bench.length?bench.slice(0,6).reduce(function(s,v){return s+v;},0)/Math.min(6,bench.length):60;
+ if(by.GK.length<2)pen+=2;
+ return xiAvg*.85+bAvg*.15-pen/2;
+}
+function natAuto(){
+ var c=natCands(),by={GK:[],DF:[],MF:[],FW:[]};c.forEach(function(x){by[natGroup(x.pos)].push(x);});
+ var q={GK:3,DF:8,MF:7,FW:5},sel=[];for(var g in q)sel=sel.concat(by[g].slice(0,q[g]));return sel.map(function(x){return x.n;});
+}
+function natConfirm(names){
+ var c=natCands(),m={};c.forEach(function(x){m[x.n]=x;});
+ var sel=names.map(function(n){return m[n];}).filter(Boolean);
+ natYear(sel);S.natPending=false;S.natSel=[];renderCoach();saveGame('off');
+}
+function natYear(selIn){
  var y=S.year,kind=y%4===0?'W杯':y%4===2?'アジアカップ':'親善試合・予選';
- var sq=japanPool(),str=sq.slice(0,16).reduce(function(s,x){return s+x[1];},0)/16+(S.rep||0)/25;
+ var sel=selIn||natAuto().map(function(n){return {n:n,pos:'CM',r:70};});
+ var sq=sel.map(function(x){return [x.n,x.r];}).sort(function(a,b){return b[1]-a[1];}),str=natStrength(sel)+(S.rep||0)/25;
  function sg(x){return 1/(1+Math.exp(-x));}
  var res='',dl=0,mine=sq.filter(function(x){return S.squad.some(function(p){return p.name===x[0];});}).length;
  if(kind==='親善試合・予選'){var w=0;for(var k=0;k<6;k++)if(Math.random()<sg((str-80)/3))w++;res='6試合 '+w+'勝';dl=w>=5?3:w>=3?1:-2;}
@@ -1086,7 +1129,7 @@ function natYear(){
 }
 function coachPhase(){
  S.coachOffers=[];
- if(S.natCoach)natYear();
+ if(S.natCoach){S.natPending=true;S.natSel=[];}
  var rep=S.rep||0;
  if(!S.natCoach&&rep>=80&&S.div===1)S.coachOffers.push({kind:'nat',name:'日本代表'});
  if(rep>=40&&Math.random()<.75){
@@ -1108,8 +1151,33 @@ function coachPhase(){
  }
  renderCoach();saveGame('off');
 }
+function natSelHTML(){
+ var y=S.year,kind=y%4===0?'W杯':y%4===2?'アジアカップ':'親善試合・予選';
+ var c=natCands(),sel=S.natSel||[],cnt={GK:0,DF:0,MF:0,FW:0},m={};c.forEach(function(x){m[x.n]=x;});
+ sel.forEach(function(n){if(m[n])cnt[natGroup(m[n].pos)]++;});
+ var st=sel.length?Math.round(natStrength(sel.map(function(n){return m[n];}).filter(Boolean))):0;
+ var h='<div class="coachcard"><b class="cn">🇯🇵 日本代表メンバー選考（'+kind+'）</b>'
+  +'<p class="sub" style="margin:4px 0 0">'+NATN+'人を選んでください。GK・DF・MF・FWの人数のバランスも結果に響きます。数字は海外基準の評価です。</p>'
+  +'<p class="natcnt">選出 <b>'+sel.length+'</b> / '+NATN+'　GK '+cnt.GK+'・DF '+cnt.DF+'・MF '+cnt.MF+'・FW '+cnt.FW+(sel.length?'　チーム力 '+st:'')+'</p>'
+  +'<div class="btnrow"><button class="btn ghost small" id="btn-natauto">おまかせで選ぶ</button><button class="btn ghost small" id="btn-natclear">選び直す</button></div><div class="natlist">';
+ var cur='';
+ c.forEach(function(x){var g=natGroup(x.pos),on=sel.indexOf(x.n)>-1;
+  if(g!==cur){h+='<div class="natg">'+g+'</div>';cur=g;}
+  h+='<button type="button" class="natp'+(on?' on':'')+'" data-nat="'+esc(x.n)+'" aria-pressed="'+on+'"><span>'+x.pos+'</span><b>'+esc(x.n)+'</b><small>'+esc(x.club)+'</small><u>'+x.r+'</u></button>';});
+ h+='</div><button class="btn cta" id="btn-natgo"'+(sel.length!==NATN?' disabled':'')+'>'+(sel.length!==NATN?'あと'+(NATN-sel.length)+'人':'この'+NATN+'人で'+kind+'へ')+'</button></div>';
+ return h;
+}
+document.addEventListener('click',function(e){
+ var t=e.target;if(!t.closest)return;
+ var b=t.closest('[data-nat]');
+ if(b){var n=b.getAttribute('data-nat'),s=S.natSel=S.natSel||[],i=s.indexOf(n);if(i>-1)s.splice(i,1);else if(s.length<NATN)s.push(n);renderCoach();return;}
+ if(t.closest('#btn-natauto')){S.natSel=natAuto();renderCoach();}
+ else if(t.closest('#btn-natclear')){S.natSel=[];renderCoach();}
+ else if(t.closest('#btn-natgo')){if((S.natSel||[]).length===NATN)natConfirm(S.natSel.slice());}
+});
 function renderCoach(){
  var h='',nl=S.natLog&&S.natLog.length?S.natLog[S.natLog.length-1]:null;
+ if(S.natCoach&&S.natPending)h+=natSelHTML();
  if(S.natCoach&&nl&&nl.y===S.year){
   h+='<div class="coachcard"><b class="cn">🇯🇵 日本代表（兼任）</b><p class="sub" style="margin:4px 0 0">'+nl.k+'：<b style="color:var(--amber)">'+nl.r+'</b>　監督評価 '+(nl.dl>0?'+':'')+nl.dl+'</p>'
    +'<p class="sub" style="margin:4px 0 0;font-size:12px">主な招集：'+nl.top.map(esc).join('、')+(nl.mine?'　ほか自クラブから'+nl.mine+'人':'')+'</p></div>';
@@ -3504,6 +3572,7 @@ function updateReleaseCount(){
  $('btn-release').disabled=S.releasing.length!==need;
 }
 function startNextSeason(){
+ if(S.natCoach&&S.natPending){natConfirm((S.natSel&&S.natSel.length===NATN)?S.natSel.slice():natAuto());}
  var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0));
  S.money=r2((S.money||0)-cost);S.buyCost=r2((S.buyCost||0)+cost);
  startNextSeason0();
