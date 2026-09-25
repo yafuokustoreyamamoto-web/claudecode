@@ -1261,7 +1261,7 @@ function coachAccept(i){
  var star=clamp((squadStr()-8-59)/6,.5,5);
  var oc=newClub({name:oldName,star:star},oldDiv);oc.mgr=S.mgr;S.pool.push(oc);
  S.pool.splice(S.pool.indexOf(c),1);
- S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.ub=1.04;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.3:revOf(c.name,c.div)*.15)+(S.money>0?0:S.money));
+ S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.ub=1.04;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.1:revOf(c.name,c.div)*.05)+(S.money>0?0:S.money));
  S.squad=clubSquad(c);if(S.realStart||S.oxR!=null)calibFin();
  S.slots=[];S.offers=[];S.cands=[];S.picked=[];S.holes=[];S.releasing=[];S.loans=[];S.champStreak=0;S.lastChamp=false;S.aclEntry=null;
  S.target=c.st>=divAvg(c.div)+1?'top':'mid';
@@ -1368,10 +1368,30 @@ document.addEventListener('click',function(e){
  else if(t.closest('[data-hire]')){var b=t.closest('[data-hire]');var nm=b.getAttribute('data-hire'),c=+b.getAttribute('data-cost'),f=b.getAttribute('data-from');
   ask(esc(nm)+'を監督に招へいしますか？<br>就任費用 '+feeTxt(c)+'（今の監督への違約金を含む）','招へいする',function(){hireMgr(nm,c,f);});}
 });
+function loanReturn(lp){
+ var j=S.squad.indexOf(lp);if(j<0)return;S.squad.splice(j,1);var lsi=S.slots.indexOf(lp.id);if(lsi>-1)S.slots[lsi]=null;
+ if(lp.real!=null&&S.realUsed)delete S.realUsed[lp.real];if(lp.eu!=null&&S.euUsed)delete S.euUsed[lp.eu];if(lp.os!=null&&S.osUsed)delete S.osUsed['jp'+lp.os];delete usedNames[lp.name];
+ S.departed=(S.departed||[]).concat([lp.name+'（レンタル満了・'+lp.loanIn.club+'へ復帰）']);
+}
+function loanBuy(id){
+ var p=playerById(id);if(!p||!p.loanIn||!p.loanIn.expired)return;var f=p.loanIn.buy!=null?p.loanIn.buy:buyFee(p);
+ if(f>(S.money||0)){note('買取額 '+feeTxt(f)+' に対して残高が足りません（残高 '+moneyTxt(S.money||0)+'）。');return;}
+ ask(esc(p.name)+'を買取オプション '+feeTxt(f)+' で完全移籍させますか？','買い取る',function(){
+  S.money=r2((S.money||0)-f);S.buyCost=r2((S.buyCost||0)+f);
+  p.route=p.loanIn.club+'からレンタル→買取で完全移籍';p.loanIn=null;
+  var hi=S.holes.indexOf(p.pos);if(hi>-1)S.holes.splice(hi,1);
+  renderOffSquad();renderFin();if(S.cands&&S.cands.length)renderCands();saveGame('off');
+ });
+}
+document.addEventListener('click',function(e){
+ var b=e.target.closest&&e.target.closest('[data-lbuy]');if(!b)return;
+ e.stopPropagation();e.preventDefault();loanBuy(+b.getAttribute('data-lbuy'));
+},true);
 function loanable(p){return !p.youth&&!p.alum&&!p.released&&!p.prospect&&!p.legend&&feeOfP(p)>0&&(p.real!=null||p.eu!=null||p.os!=null);}
 function loanFee(p){return r2(Math.max(.02,feeOfP(p)*.12));}
 function pickFee(p){return p.loanIn?loanFee(p):feeOfP(p);}
-function loanTxt(p){return 'レンタル料 '+feeTxt(loanFee(p))+'・'+(S.window==='summer'?'今季終了まで':'1シーズン')+'・年俸は全額負担';}
+function buyFee(p){return r2(feeOfP(p)*.9);}
+function loanTxt(p){return 'レンタル料 '+feeTxt(loanFee(p))+'・'+(S.window==='summer'?'今季終了まで':'1シーズン')+'・年俸は全額負担・買取オプション '+feeTxt(buyFee(p));}
 function candMoney(p){var fe=feeOfP(p),fi=fitOf(p);
  return '<div class="candmoney">'+(p.nego==='ok'?'✅ 本人合意ずみ　':'本人の移籍意思 <b>'+accTxt(p)+'</b>　')+'移籍金 <b>'+feeTxt(fe)+'</b>　年俸 '+feeTxt(r2(salOf(p)*divPay()))+(fi>=0?'　監督の戦術（'+TACJ[S.mgr.tac]+'）に <b class="fit'+fi+'">'+fitMark(fi)+'</b>':'')+'</div>';}
 function tableRank(){var t=table();for(var i=0;i<t.length;i++)if(t[i].me)return i+1;return 0;}
@@ -1479,7 +1499,7 @@ function renderClubSel(d){
  $('cl-tabs').innerHTML=h;
  var L=clubList().filter(function(c){return c.div===S.clTab;}).sort(function(a,b){return b.star-a.star;});
  h='';L.forEach(function(c){var rv=revOf(c.name,c.div);
-  h+='<button type="button" class="clrow" data-club="'+esc(c.name)+'"><b>'+esc(c.name)+'</b><span>'+starHTML(coreOf(c.star))+'</span><small>年間収入'+feeTxt(rv)+'　開始時の残高 '+feeTxt(r2(rv*.15))+'<br>監督：'+(c.mgr?esc(c.mgr.n)+'（'+c.mgr.form+'／'+TACJ[c.mgr.tac]+'）':'—')+'</small></button>';});
+  h+='<button type="button" class="clrow" data-club="'+esc(c.name)+'"><b>'+esc(c.name)+'</b><span>'+starHTML(coreOf(c.star))+'</span><small>年間収入'+feeTxt(rv)+'　開始時の残高 '+feeTxt(r2(rv*.05))+'<br>監督：'+(c.mgr?esc(c.mgr.n)+'（'+c.mgr.form+'／'+TACJ[c.mgr.tac]+'）':'—')+'</small></button>';});
  $('cl-list').innerHTML=h;
 }
 function startClub(name){
@@ -1491,7 +1511,7 @@ function startClub(name){
  S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||null;S.ub=1.04;
  if(!S.mgr){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;}
  S.scale=clubScale(c.name,c.div);
- S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.15);S.rep={1:40,2:30,3:20}[c.div];calibFin();
+ S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.05);S.rep={1:40,2:30,3:20}[c.div];calibFin();
  S.rep={1:40,2:30,3:20}[c.div];
  var rk=divClubs(c.div).filter(function(x){return x.st>c.st;}).length+1,n=divClubs(c.div).length+1;
  S.target=rk<=3?'top':rk>n-5?'stay':'mid';
@@ -3579,6 +3599,8 @@ function renderOffSquad(){
   rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small>'+(rp.age<=27?'<button type="button" class="loanbtn" data-loan="'+rp.id+'">レンタルに出す</button>':'')+(S.realStart?' <button type="button" class="loanbtn" data-rel="'+rp.id+'">契約解除</button>':'')+'</span><span class="rv">'+rp.ovr+'</span></li>';
  }
  var lin=S.squad.filter(function(p){return p.loanIn;});
+ var lex=lin.filter(function(p){return p.loanIn.expired;});lin=lin.filter(function(p){return !p.loanIn.expired;});
+ lex.forEach(function(p){var f=p.loanIn.buy!=null?p.loanIn.buy:buyFee(p);rh+='<li class="rhead"><span class="rp">'+p.pos+'</span><span>🔁 '+esc(p.name)+'（'+p.age+'歳・総合'+p.ovr+'）レンタル満了。買い取らなければ'+esc(p.loanIn.club)+'へ戻ります　<button class="btn small" data-lbuy="'+p.id+'">買い取る（'+feeTxt(f)+'）</button></span><span></span></li>';});
  rh+=lin.length?'<li class="rhead"><span class="rp"></span><span>レンタル加入中：'+lin.map(function(p){return esc(p.name)+'（'+esc(p.loanIn.club||'')+'から・'+(p.loanIn.back||S.year+1)+'年目のオフに復帰）';}).join('、')+'</span><span></span></li>':'';
  $('o-squad').innerHTML=rh+((S.loans||[]).length?'<li class="rhead"><span class="rp"></span><span>レンタル中：'+S.loans.map(function(L){return esc(L.p.name)+'（'+esc(L.club)+'・'+L.back+'年目に復帰）';}).join('、')+'</span><span></span></li>':'');
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
@@ -3601,18 +3623,19 @@ function openOffseason(){S.univNote='';openOffseason0();if(S.univNote){S.offGrow
  var nc=newCoaches(2),mn=aiMgrChanges('winter');
  if(nc.length||mn.length){S.offGrowth=(S.offGrowth||'')+(mn.length?'<li>📰 監督人事：'+mn.slice(0,8).join('／')+(mn.length>8?' ほか'+(mn.length-8)+'件':'')+'</li>':'')+(nc.length?'<li>🎓 現役を退いた'+nc.map(esc).join('、')+'が監督として指導者の道へ。</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  S.mgrListIds=null;
- if(S.loanInBack&&S.loanInBack.length){S.offGrowth=(S.offGrowth||'')+'<li>🔁 レンタル期間満了：'+S.loanInBack.map(esc).join('、')+'が保有元へ戻りました。</li>';$('o-growth').innerHTML=S.offGrowth;S.loanInBack=[];}
+ if(S.loanInBack&&S.loanInBack.length){S.offGrowth=(S.offGrowth||'')+'<li>🔁 レンタル期間満了：'+S.loanInBack.map(esc).join('、')+'。現有戦力の欄で<b>買い取る</b>か選べます（買い取らなければ保有元へ戻ります）。</li>';$('o-growth').innerHTML=S.offGrowth;S.loanInBack=[];}
  coachPhase();gemAnnounce();awakenAnnounce();}
 function openOffseason0(){
  var moved=S.pendingMove||0;
  S.lastMoved=moved;
  aiPromotion();
- if(moved)S.div=clamp(S.div+moved,1,3);
+ var oldDiv=S.div;if(moved)S.div=clamp(S.div+moved,1,3);
+ if(moved&&S.oxR!=null&&S.div!==oldDiv){S.scale=Math.max(.25,(S.scale||1)*baseRev(oldDiv)*(moved<0?1.3:.75)/baseRev(S.div));}
  S.pendingMove=0;
  S.year++;
  ageSquad();
  S.holes=[];S.comp=0;S.compFee=0;S.departed=[];S.returns=[];
- S.loanInBack=[];for(var lj=S.squad.length-1;lj>=0;lj--){var lp=S.squad[lj];if(lp.loanIn&&lp.loanIn.back&&S.year>=lp.loanIn.back){S.squad.splice(lj,1);var lsi=S.slots.indexOf(lp.id);if(lsi>-1)S.slots[lsi]=null;S.holes.push(lp.pos);S.loanInBack.push(lp.name+'（'+lp.loanIn.club+'へ）');if(lp.real!=null&&S.realUsed)delete S.realUsed[lp.real];if(lp.eu!=null&&S.euUsed)delete S.euUsed[lp.eu];if(lp.os!=null&&S.osUsed)delete S.osUsed['jp'+lp.os];delete usedNames[lp.name];}}
+ S.loanInBack=[];for(var lj=S.squad.length-1;lj>=0;lj--){var lp=S.squad[lj];if(lp.loanIn&&lp.loanIn.back&&S.year>=lp.loanIn.back){lp.loanIn.expired=true;S.holes.push(lp.pos);S.loanInBack.push(lp.name);}}
  if(S.loans&&S.loans.length){
   for(var li=S.loans.length-1;li>=0;li--){
    var L=S.loans[li];
@@ -3996,6 +4019,7 @@ function updateReleaseCount(){
  $('btn-release').disabled=S.releasing.length!==need;
 }
 function startNextSeason(){
+ S.squad.filter(function(p){return p.loanIn&&p.loanIn.expired;}).forEach(loanReturn);
  if(S.natCoach&&S.natPending){natConfirm((S.natSel&&S.natSel.length===NATN)?S.natSel.slice():natAuto());}
  var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+pickFee(S.cands[k]);},0));
  S.money=r2((S.money||0)-cost);S.buyCost=r2((S.buyCost||0)+cost);
@@ -4008,7 +4032,7 @@ function startNextSeason0(){
  for(i=0;i<S.releasing.length;i++)
   for(j=0;j<S.squad.length;j++)if(S.squad[j].id===S.releasing[i]){S.squad.splice(j,1);break;}
  for(i=0;i<S.picked.length;i++){var np=S.cands[S.picked[i]];np.joined=S.year;np.route=np.prospect?np.univ+'から特別指定':S.year+'年目のオフに獲得';S.squad.push(np);
-  if(np.loanIn){np.loanIn={club:np.rclub||'保有元',back:S.year+1};np.route=(np.rclub||'')+'から期限付き移籍（レンタル）';}
+  if(np.loanIn){np.loanIn={club:np.rclub||'保有元',back:S.year+1,buy:buyFee(np)};np.route=(np.rclub||'')+'から期限付き移籍（レンタル）';}
   if(np.alum){np.alum=false;}
   if(np.youth){np.youth=false;np.route='ユースから昇格';S.youth=(S.youth||[]).filter(function(q){return q!==np;});}
   if(np.real!=null){S.realUsed[np.real]=1;realFree(np.name);}if(np.eu!=null){S.euUsed=S.euUsed||{};S.euUsed[np.eu]=1;}if(np.os!=null){S.osUsed=S.osUsed||{};S.osUsed['jp'+np.os]=1;}}
