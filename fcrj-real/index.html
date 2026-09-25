@@ -97,6 +97,12 @@ p{margin:0 0 .8em;}
 .natp.on{background:rgba(255,194,26,.18);}
 .natp.on b{color:var(--amber);}
 .natp:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
+.scoutbox{border:1.5px solid var(--amber);border-radius:3px;padding:12px;margin:8px 0 12px;display:grid;gap:8px;}
+.scoutbox label{display:grid;gap:2px;font-size:12px;}
+.scoutbox input,.scoutbox select{font:inherit;font-size:14px;padding:7px;border-radius:3px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--chalk);}
+.scpos{display:flex;flex-wrap:wrap;gap:6px;}
+.scpos button{flex:1 0 20%;padding:7px 0;border:1.5px solid var(--line);border-radius:3px;background:transparent;color:var(--chalk);font:inherit;font-weight:700;cursor:pointer;}
+.scpos button.on{background:var(--amber);border-color:var(--amber);color:var(--ink);}
 .btn.ghost{background:transparent;color:var(--chalk);border:1.5px solid var(--line);}
 .btn.small{padding:11px;font-size:14px;}
 .btn:active{transform:translateY(1px);}
@@ -574,6 +580,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
   </div>
   <div class="sec" id="o-cand-sec">
     <h2>獲得候補</h2>
+    <div class="scout" id="o-scout"></div>
     <p class="sub" id="o-cand-sub">3人まで獲れます。もう一度タップすれば取り消せます。</p>
     <div id="o-cands"></div>
     <div class="counter" id="o-count">獲得 0 / 3</div>
@@ -1335,7 +1342,7 @@ function openSummer(){
  S.offTitle='夏の移籍期間　'+S.year+'年目';
  S.offSub='前半戦を'+divName(S.div)+' '+tableRank()+'位で折り返しました（'+S.w+'勝'+S.d+'分'+S.l+'敗）。夏の補強と引き抜きへの対応を決めます。';
  S.offGrowth='<li>後半戦は'+(S.rounds-S.round)+'試合。補強した選手はすぐに出場できます。</li>';S.offRetire='';S.offRetireN=0;
- S.offers=genOffers().slice(0,2);S.cands=[];S.picked=[];
+ S.offers=genOffers().slice(0,2);S.cands=[];S.picked=[];S.scoutLeft=3;S.scoutQ=null;
  renderOffFromState();
  if(!S.offers.length)genCands();
  saveGame('off');
@@ -3400,7 +3407,7 @@ function openOffseason0(){
  S.target=S.nextTarget||'stay';
  S.offTitle=$('o-title').textContent;S.offSub=$('o-sub').textContent;
  S.offGrowth=$('o-growth').innerHTML;S.offRetire=$('o-retire').innerHTML;S.offRetireN=ret.length;
- S.offers=genOffers();S.cands=[];S.picked=[];
+ S.offers=genOffers();S.cands=[];S.picked=[];S.scoutLeft=3;S.scoutQ=null;
  renderOffFromState();
  if(!S.offers.length)genCands();
  saveGame('off');
@@ -3512,6 +3519,67 @@ function genCands(){
  renderCands();
  saveGame('off');
 }
+var POSL=['GK','CB','SB','DM','CM','OM','WG','CF'];
+var REGJ={all:'すべて',j:'Jリーグ',big5:'欧州5大リーグ',euo:'欧州その他（蘭・白・葡・蘇）',jpab:'海外組の日本人'};
+function scoutDefault(){return {fee:Math.max(0,r2(S.money||0)),reg:S.div>100?'big5':'j',pos:[],style:'mgr',age:0};}
+function scoutRules(){var rep=S.rep||0,d=S.div;
+ return {eu:d>100||d===1||(d===2&&rep>=60),big5:d>100||(d===1&&rep>=50),jpab:d>100||d<=2||rep>=40};}
+function scoutPool(q){
+ var out=[],own={},i;S.realUsed=S.realUsed||{};var R=scoutRules();
+ S.squad.concat(S.cands||[]).forEach(function(p){own[p.name]=1;});
+ var okPos=function(p){return !q.pos.length||q.pos.indexOf(p)>-1;},okAge=function(a){return !q.age||a<=q.age;};
+ if(q.reg==='all'||q.reg==='j'){var P=REAL.P;for(i=0;i<P.length;i++){var r=P[i];if(S.realUsed[i]||own[r[0]]||!okPos(r[3])||!okAge(r[2]))continue;
+  var fe=r[11]>0?r[11]:r2(Math.max(0,.00035*Math.pow(Math.max(0,r[6]+6-58),2.3)));if(fe>q.fee)continue;out.push({k:'j',i:i,g:r[6],fee:fe});}}
+ if(q.reg!=='j'&&q.reg!=='jpab'||q.reg==='all'){S.euUsed=S.euUsed||{};REALEU.P.forEach(function(r,i){if(S.euUsed[i]||own[r[0]]||!okPos(r[3])||!okAge(r[2]))return;
+  var lg=REALEU.C[r[1]][1],big=['GB1','ES1','L1','IT1','FR1'].indexOf(lg)>-1;
+  if(!R.eu||(big&&!R.big5))return;
+  if(q.reg==='big5'&&!big)return;if(q.reg==='euo'&&big)return;if(r[7]>q.fee)return;out.push({k:'eu',i:i,g:r[5],fee:r[7]});});}
+ if((q.reg==='all'||q.reg==='jpab')&&R.jpab){S.osUsed=S.osUsed||{};REALOS.JP.forEach(function(r,i){if(S.osUsed['jp'+i]||own[r[0]]||!okPos(r[1])||!okAge(r[3]))return;
+  var fe=r2(.3+r[5]*2.5);if(fe>q.fee)return;out.push({k:'os',i:i,g:Math.round(72+r[5]*18),fee:fe});});}
+ return out;
+}
+function scoutBuild(o){
+ var p=makePlayer0(0);delete usedNames[p.name];
+ if(o.k==='j'){var r=REAL.P[o.i];p.name=r[0];p.real=o.i;p.rclub=rclubName(r[1]);p.age=r[2];p.pos=r[3];p.pos2=r[4];p.pos3=r[4]?r[5]:'';p.foreign=!!r[8];p.nat=r[8]||'';realStats(p,r[6],r[9]);p.pot=Math.max(p.ovr,p.ovr+(r[7]-r[6]));p.route=p.rclub+'から獲得';}
+ else if(o.k==='eu'){var e=REALEU.P[o.i];p.name=e[0];p.eu=o.i;p.rclub=REALEU.C[e[1]][0];p.age=e[2];p.pos=e[3];p.pos2=e[4];p.pos3='';p.foreign=e[6]!=='JP';p.nat=e[6]==='JP'?'':(NATMAP[e[6]]?e[6]:'LG');realStats(p,e[5],0);p.pot=p.ovr+(p.age<=21?4:p.age<=23?2:0);p.route=p.rclub+'から獲得';}
+ else{var j=REALOS.JP[o.i];p.name=j[0];p.os=o.i;p.rclub=j[4];p.age=j[3];p.pos=j[1];p.pos2=j[2];p.pos3='';p.foreign=false;p.nat='';realStats(p,72+j[5]*18,0);p.pot=p.ovr;p.route=j[4]+'から帰国';}
+ p.fee=o.fee;usedNames[p.name]=1;return p;
+}
+function scoutRun(q){
+ var pool=scoutPool(q),style=q.style==='mgr'?(S.mgr?S.mgr.tac:''):q.style,res=[];
+ pool.sort(function(a,b){return (b.g+Math.random()*3)-(a.g+Math.random()*3);});
+ for(var i=0;i<pool.length&&res.length<8&&i<400;i++){
+  var p=scoutBuild(pool[i]);
+  if(style&&p.pos!=='GK'&&fitOf(p,{tac:style})<1)continue;
+  res.push(p);
+ }
+ if(!res.length)return 0;
+ S.cands=res;S.candTag=res.map(function(p){var f=style&&p.pos!=='GK'?fitOf(p,{tac:style}):-1;return '方針に合致：'+esc(p.rclub||'')+(f>=0?'　'+TACJ[style]+fitMark(f):'');});
+ S.picked=[];S.scoutLeft=(S.scoutLeft==null?3:S.scoutLeft)-1;S.scoutQ=q;
+ renderCands();saveGame('off');
+ return res.length;
+}
+function scoutHTML(){
+ var q=S.scoutQ||scoutDefault(),left=S.scoutLeft==null?3:S.scoutLeft;
+ var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">条件に合う実在選手をリストアップします（この移籍期間に残り'+left+'回）。残高 '+moneyTxt(S.money||0)+'</p>';
+ var R=scoutRules(),lim=[];if(!R.big5)lim.push('欧州5大リーグの選手はJ1で監督評価50以上から交渉できます');if(!R.eu)lim.push('欧州その他の選手はJ1、またはJ2で監督評価60以上から');if(!R.jpab)lim.push('海外組の日本人はJ2以上、または監督評価40以上から');
+ if(lim.length)h+='<p class="sub" style="margin:0 0 6px;font-size:11px">'+lim.join('。')+'。</p>';
+ h+='<label>移籍金の上限（億円）<input type="number" id="sc-fee" min="0" step="0.1" value="'+q.fee+'"></label>';
+ h+='<label>地域<select id="sc-reg">';for(var k in REGJ)h+='<option value="'+k+'"'+(q.reg===k?' selected':'')+'>'+REGJ[k]+'</option>';h+='</select></label>';
+ h+='<label>プレースタイル<select id="sc-style"><option value="">指定なし</option><option value="mgr"'+(q.style==='mgr'?' selected':'')+'>監督の得意'+(S.mgr?'（'+TACJ[S.mgr.tac]+'）':'')+'</option>';
+ for(var t in TACJ)h+='<option value="'+t+'"'+(q.style===t?' selected':'')+'>'+TACJ[t]+'</option>';h+='</select></label>';
+ h+='<label>年齢<select id="sc-age">'+[[0,'指定なし'],[23,'23歳以下'],[27,'27歳以下'],[30,'30歳以下']].map(function(a){return '<option value="'+a[0]+'"'+(q.age===a[0]?' selected':'')+'>'+a[1]+'</option>';}).join('')+'</select></label>';
+ h+='<div class="scpos" role="group" aria-label="ポジション">'+POSL.map(function(p){var on=q.pos.indexOf(p)>-1;return '<button type="button" class="'+(on?'on':'')+'" data-scpos="'+p+'" aria-pressed="'+on+'">'+p+'</button>';}).join('')+'</div>';
+ h+='<button class="btn small" id="btn-scout"'+(left<=0?' disabled':'')+'>'+(left<=0?'この移籍期間のリストアップは終了':'この方針でリストアップ')+'</button></div>';
+ return h;
+}
+function scoutRead(){var q=S.scoutQ||scoutDefault();return {fee:Math.max(0,parseFloat($('sc-fee').value)||0),reg:$('sc-reg').value,style:$('sc-style').value,age:parseInt($('sc-age').value,10)||0,pos:(q.pos||[]).slice()};}
+document.addEventListener('click',function(e){
+ var t=e.target;if(!t.closest)return;
+ var b=t.closest('[data-scpos]');
+ if(b){var q=scoutRead(),p=b.getAttribute('data-scpos'),i=q.pos.indexOf(p);if(i>-1)q.pos.splice(i,1);else q.pos.push(p);S.scoutQ=q;$('o-scout').innerHTML=scoutHTML();return;}
+ if(t.closest('#btn-scout')){var q2=scoutRead();var n=scoutRun(q2);if(!n)note('条件に合う選手が見つかりませんでした（回数は減っていません）。予算を上げるか、地域・ポジション・スタイルの条件をゆるめてください。交渉できる地域の制限も確認してください。');}
+});
 function renderCands(){
  var h='',i;
  for(i=0;i<S.cands.length;i++){
@@ -3526,6 +3594,7 @@ function renderCands(){
   +(S.compFee>0?'移籍金 '+feeTxt(S.compFee)+' ぶん、候補の質が上がっています。':'')
   +(S.champStreak?'連覇中のため、他クラブが本気になり補強枠が減っています。':'')+'もう一度タップすれば取り消せます。';
  $('o-cand-sec').style.display='block';
+ $('o-scout').innerHTML=scoutHTML();
  updateCandCount();
 }
 function updateCandCount(){
@@ -3582,7 +3651,8 @@ function startNextSeason0(){
  var i,j;
  for(i=0;i<S.releasing.length;i++)
   for(j=0;j<S.squad.length;j++)if(S.squad[j].id===S.releasing[i]){S.squad.splice(j,1);break;}
- for(i=0;i<S.picked.length;i++){var np=S.cands[S.picked[i]];np.joined=S.year;np.route=np.prospect?np.univ+'から特別指定':S.year+'年目のオフに獲得';S.squad.push(np);}
+ for(i=0;i<S.picked.length;i++){var np=S.cands[S.picked[i]];np.joined=S.year;np.route=np.prospect?np.univ+'から特別指定':S.year+'年目のオフに獲得';S.squad.push(np);
+  if(np.real!=null){S.realUsed[np.real]=1;realFree(np.name);}if(np.eu!=null){S.euUsed=S.euUsed||{};S.euUsed[np.eu]=1;}if(np.os!=null){S.osUsed=S.osUsed||{};S.osUsed['jp'+np.os]=1;}}
  S.releasing=[];S.picked=[];S.holes=[];
  openFormation();
 }
