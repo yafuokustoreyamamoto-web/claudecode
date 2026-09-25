@@ -717,13 +717,13 @@ var POOLDEF='いわてグルージャ盛岡:1.6,Y.S.C.C.横浜:1.4,沖縄SV:1.3,
 var UNIVDEF='筑波大学:2.2,明治大学:2.1,流通経済大学:2.0,法政大学:1.9,順天堂大学:1.8,桐蔭横浜大学:1.9,東洋大学:1.8,国士舘大学:1.7,駒澤大学:1.7,関西学院大学:1.9';
 var HANEDADEF='HanedaFC:3.0';
 var EURO={
- S:{n:'欧州ビッグクラブ',ovr:88,age:28,fee:[8,15],div:1,
+ S:{n:'欧州ビッグクラブ',ovr:88,age:28,fee:[6,12],div:1,
   c:'マンチェスター・ユナイテッド（イングランド）,マンチェスター・シティ（イングランド）,チェルシー（イングランド）,トッテナム（イングランド）,リヴァプール（イングランド）,アーセナル（イングランド）,バイエルン・ミュンヘン（ドイツ）,ドルトムント（ドイツ）,レアル・マドリード（スペイン）,FCバルセロナ（スペイン）,パリ・サンジェルマン（フランス）,ACミラン（イタリア）,インテル（イタリア）,ユヴェントス（イタリア）'},
- A:{n:'5大リーグ',ovr:84,age:28,fee:[4,8],div:1,
+ A:{n:'5大リーグ',ovr:84,age:28,fee:[3,6],div:1,
   c:'ブライトン（イングランド）,フランクフルト（ドイツ）,SCフライブルク（ドイツ）,レアル・ソシエダ（スペイン）,ASモナコ（フランス）,SSラツィオ（イタリア）'},
- B:{n:'欧州の強豪',ovr:80,age:29,fee:[2,4],div:2,
+ B:{n:'欧州の強豪',ovr:80,age:29,fee:[1.5,3],div:2,
   c:'セルティック（スコットランド）,フェイエノールト（オランダ）,スポルティングCP（ポルトガル）,AZアルクマール（オランダ）,KRCヘンク（ベルギー）,ユニオン・サン＝ジロワーズ（ベルギー）'},
- C:{n:'欧州への入り口',ovr:76,age:23,fee:[1,2],div:2,
+ C:{n:'欧州への入り口',ovr:76,age:23,fee:[.8,1.6],div:2,
   c:'シント＝トロイデン（ベルギー）,NECナイメヘン（オランダ）,ポルティモネンセ（ポルトガル）,レッドブル・ザルツブルク（オーストリア）,FCミッティラン（デンマーク）,グラスホッパー・チューリッヒ（スイス）'}};
 var ASIA={n:'アジア',fee:[.3,1],
  c:'ブリーラム・ユナイテッド（タイ）,BGパトゥム・ユナイテッド（タイ）,ムアントン・ユナイテッド（タイ）,ジョホール・ダルル・タクジム（マレーシア）,ペルシブ・バンドン（インドネシア）,バリ・ユナイテッド（インドネシア）,ハノイFC（ベトナム）,アルビレックス新潟シンガポール（シンガポール）,カヤFCイロイロ（フィリピン）'};
@@ -1064,10 +1064,12 @@ function realClubNames(c,refresh){
  function first(list){for(var k=0;k<list.length;k++){var q=list[k];if(!S.realUsed[q]&&!got[q]){got[q]=1;return P[q][0];}}return uniqueName();}
  c.ace=first(L.a);c.ace2=first(L.a);c.pm=first(L.m.concat(L.a));c.gk=first(L.g);
 }
+function teamRef(){var b=S.squad.map(baseT).sort(function(x,y){return y-x;});return b.length?b[Math.min(10,b.length-1)]:70;}
+function candTarget(){var ref=teamRef(),r=Math.random();return r<.55?ref-8+Math.random()*6:r<.9?ref-2+Math.random()*4:ref+2+Math.random()*4;}
 function makePlayer(bonus,forcePos,forceAge){
  var p=makePlayer0(bonus,forcePos,forceAge);
  if(REAL_OFF||forceAge||/[?&]real=0/.test(location.search))return p;
- var target=baseT(p);
+ var target=(CAND_CTX&&S.realStart&&S.squad&&S.squad.length)?candTarget():baseT(p);
  S.legUsed=S.legUsed||{};
  if(Math.random()<.025){
   var lc=[],j;
@@ -1093,7 +1095,7 @@ function makePlayer(bonus,forcePos,forceAge){
  p.name=r[0];usedNames[p.name]=1;p.real=ri;p.rclub=rclubName(r[1]);
  p.age=r[2];p.pos=r[3];p.pos2=r[4];p.pos3=r[4]?r[5]:'';
  p.foreign=!!r[8];p.nat=r[8]||'';
- var tt=realistic?r[6]+Math.max(0,(bonus||0)-DF().bonus)*.6:r[6]+clamp(target-r[6],-4,4);
+ var tt=realistic?r[6]+(S.realStart?0:Math.max(0,(bonus||0)-DF().bonus)*.6):r[6]+clamp(target-r[6],S.realStart?-3:-4,S.realStart?1:4);
  realStats(p,tt,r[9]);
  p.pot=Math.max(p.ovr,p.ovr+(r[7]-r[6]));
  p.fee=r[11]>0?r[11]:null;
@@ -1260,7 +1262,7 @@ function coachAccept(i){
  var oc=newClub({name:oldName,star:star},oldDiv);oc.mgr=S.mgr;S.pool.push(oc);
  S.pool.splice(S.pool.indexOf(c),1);
  S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||S.mgr;S.ub=1.04;S.scale=clubScale(c.name,c.div);S.squad.forEach(function(p){p.salF=payF(S.scale);});S.money=r2((c.div>100?lgx(c.div).sp*.3:revOf(c.name,c.div)*.15)+(S.money>0?0:S.money));
- S.squad=clubSquad(c);
+ S.squad=clubSquad(c);if(S.realStart||S.oxR!=null)calibFin();
  S.slots=[];S.offers=[];S.cands=[];S.picked=[];S.holes=[];S.releasing=[];S.loans=[];S.champStreak=0;S.lastChamp=false;S.aclEntry=null;
  S.target=c.st>=divAvg(c.div)+1?'top':'mid';
  S.careers=(S.careers||[]).concat([{y:S.year,c:c.name}]);
@@ -1294,16 +1296,18 @@ function salOf(p){if(p.age<=18)return .01;var x=Math.max(0,p.ovr-55);return Math
 function divPay(d){return lgx(d||S.div).pay;}
 function payroll(){return r2(S.squad.reduce(function(s,p){return s+salOf(p)*(p.salF||1);},0)*divPay());}
 function payF(sc){return clamp(Math.pow(sc||1,.7),.35,2.2);}
-function opex(){return r2((S.div>100?lgx(S.div).sp*1.2:revOf(S.teamName,S.div))*.3);}
+function expRev(){var X=lgx(S.div),sc=S.scale||1;return X.sp*sc+Math.sqrt(sc)*X.att*X.price*19/1e8+X.dist;}
+function calibFin(){S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1);});S.rep0=S.rep||0;var R=expRev();S.oxR=clamp((R-payroll()-(S.mgr?mgrSal(S.mgr):0)-ycost())/R,.05,.45);}
+function opex(){if(S.oxR!=null)return r2(expRev()*S.oxR);return r2((S.div>100?lgx(S.div).sp*1.2:revOf(S.teamName,S.div))*.3);}
 function feeOfP(p){if(p.fee!=null)return p.fee;if(p.prospect)return 0;return r2(Math.max(0,.00035*Math.pow(Math.max(0,p.ovr-58),2.3)));}
 function homeGames(from,to){return (S.log||[]).filter(function(x){return x.t==='m'&&x.h&&x.r>from&&x.r<=to;}).length;}
 function finance(kind){
  var d=S.div,n=S.w+S.d+S.l,wr=n?(S.w+S.d*.4)/n:.5,rep=S.rep||0;
  var from=S.finRound||0,to=S.round||0,hg=homeGames(from,to);S.finRound=to;
- var X=lgx(d),sc=S.scale||1,sp=r2(X.sp*sc*(1+rep/200)/2);
- var att=Math.round((S.attBoost||1)*Math.sqrt(sc)*X.att*(.7+.6*wr)*(1+rep/300));
+ var X=lgx(d),sc=S.scale||1,sp=r2(X.sp*sc*(S.rep0!=null?1+(rep-S.rep0)/300:1+rep/200)/2);
+ var att=Math.round((S.attBoost||1)*Math.sqrt(sc)*X.att*(.7+.6*wr)*(S.rep0!=null?1+(rep-S.rep0)/400:1+rep/300));
  var gate=r2(att*X.price*hg/1e8),dist=r2(X.dist/2),prize=kind==='winter'?(S.prizePending||0):0;
- var sal=r2(payroll()/2),ms=S.mgr?r2(mgrSal(S.mgr)/2):0,yc=r2(ycost()/2),ox=r2(opex()/2);
+ var sal=r2(payroll()/2),ms=S.mgr?r2(mgrSal(S.mgr)/2):0,yc=r2(ycost()/2),ox=S.oxR!=null?r2((sp+gate+dist)*S.oxR):r2(opex()/2);
  var net=r2(sp+gate+dist+prize-sal-ms-yc-ox);
  S.money=r2((S.money||0)+net);
  S.fin={k:kind,ox:ox,yc:yc,sp:sp,att:att,hg:hg,gate:gate,dist:dist,prize:prize,sal:sal,ms:ms,net:net,sales:r2(S.saleIncome||0),buys:r2(S.buyCost||0)};
@@ -1452,7 +1456,7 @@ function loanOutOld(id){
   S.loans=S.loans||[];S.loans.push({p:p,back:S.year+dur,club:club,dur:dur});
   S.holes=S.holes||[];S.holes.push(p.pos);S.money=r2((S.money||0)+fee);S.saleIncome=r2((S.saleIncome||0)+fee);
   S.departed=(S.departed||[]).concat([p.name+'（'+club+'へ'+dur+'年レンタル）']);
-  if(S.cands&&S.cands.length){S.cap=(S.cap||3)+1;S.minPick=(S.minPick||0)+1;renderCands();}
+  if(S.cands&&S.cands.length){S.cap=(S.cap||3)+1;if(!S.realStart)S.minPick=(S.minPick||0)+1;renderCands();}
   renderOffSquad();renderFin();saveGame('off');
  });
 }
@@ -1483,7 +1487,7 @@ function startClub(name){
  S.teamName=c.name;S.div=c.div;S.mgr=c.mgr||null;S.ub=1.04;
  if(!S.mgr){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;}
  S.scale=clubScale(c.name,c.div);
- S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.15);
+ S.squad=clubSquad(c);S.squad.forEach(function(p){p.route=c.name+'（開幕時に在籍）';p.orig=true;p.salF=payF(S.scale);});S.money=r2(revOf(c.name,c.div)*.15);S.rep={1:40,2:30,3:20}[c.div];calibFin();
  S.rep={1:40,2:30,3:20}[c.div];
  var rk=divClubs(c.div).filter(function(x){return x.st>c.st;}).length+1,n=divClubs(c.div).length+1;
  S.target=rk<=3?'top':rk>n-5?'stay':'mid';
@@ -3750,7 +3754,7 @@ function genCands0(){
  if(S.window!=='summer'){var ur=univReturns();ur.forEach(function(p){S.cands.push(p);S.candTag.push('🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし・本人は復帰を希望）');});if(ur.length)S.univNote=ur.map(function(p){return p.name+'（'+p.univ+'）';}).join('、');}
  var r16=(S.cups&&S.cups.emp&&S.cups.emp.r16)||[];
  for(i=0;i<r16.length;i++)if(r16[i].univ){S.cands.push(makeProspect(r16[i].name));S.candTag.push('特別指定・天皇杯ベスト16');}
- S.picked=[];S.cap=3+S.holes.length;S.minPick=S.realStart?0:S.holes.length;S.candBase=base;
+ S.picked=[];S.cap=S.realStart?999:3+S.holes.length;S.minPick=S.realStart?0:S.holes.length;S.candBase=base;
  renderCands();
  saveGame('off');
 }
@@ -3782,7 +3786,8 @@ function scoutBuild(o){
 }
 function scoutRun(q){
  var pool=scoutPool(q),style=q.style==='mgr'?(S.mgr?S.mgr.tac:''):q.style,res=[];
- pool.sort(function(a,b){return (b.g+Math.random()*3)-(a.g+Math.random()*3);});
+ var ref=teamRef();pool.forEach(function(o){var w=o.g<=ref+2?Math.exp(-Math.max(0,ref-2-o.g)/6):Math.exp(-(o.g-ref-2)/1.5);o.key=-Math.log(Math.random()+1e-9)/Math.max(w,1e-4);});
+ pool.sort(function(a,b){return a.key-b.key;});
  for(var i=0;i<pool.length&&res.length<8&&i<400;i++){
   var p=scoutBuild(pool[i]);
   if(style&&p.pos!=='GK'&&fitOf(p,{tac:style})<1)continue;
@@ -3925,7 +3930,8 @@ function renderCands(){
  }
  $('o-cands').innerHTML=h;
  S.cands.forEach(function(p,k){if(p.nego==='no'){var bb=document.querySelector('[data-pick="'+k+'"]');if(bb){bb.disabled=true;bb.textContent='本人が移籍を拒否';}}});
- $('o-cand-sub').textContent='候補'+S.cands.length+'人（'+divName(S.div)+'枠'+(S.candBase||3)+'人'
+ if(S.realStart){$('o-cand-sub').textContent='候補'+S.cands.length+'人。獲得人数に上限はありません（予算の範囲で何人でも獲得できます）。もう一度タップすれば取り消せます。';}
+ else $('o-cand-sub').textContent='候補'+S.cands.length+'人（'+divName(S.div)+'枠'+(S.candBase||3)+'人'
   +(S.holes.length?'＋穴埋め'+S.holes.length+'人':'')+'）から最大'+S.cap+'人まで。'
   +(S.minPick?'引退・移籍の穴があるので最低'+S.minPick+'人は獲得が必要です。':'')
   +(S.compFee>0?'移籍金 '+feeTxt(S.compFee)+' ぶん、候補の質が上がっています。':'')
@@ -3936,7 +3942,7 @@ function renderCands(){
 }
 function updateCandCount(){
  var n=S.picked.length,rel=n-S.holes.length;
- $('o-count').textContent='獲得 '+n+' / '+S.cap+(S.minPick?'（最低'+S.minPick+'人）':'');
+ $('o-count').textContent='獲得 '+n+(S.realStart?'人':' / '+S.cap)+(S.minPick?'（最低'+S.minPick+'人）':'');
  var cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
  $('btn-tolist').disabled=n<S.minPick||over;
  $('o-count').textContent+='　移籍金 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0);
@@ -3983,6 +3989,7 @@ function startNextSeason(){
  var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0));
  S.money=r2((S.money||0)-cost);S.buyCost=r2((S.buyCost||0)+cost);
  startNextSeason0();
+ if(S.oxR!=null)S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1);});
  if(summer){S.window=null;S.squad.forEach(function(p){if(p.joined===S.year&&/オフに獲得/.test(p.route||''))p.route=S.year+'年目の夏に獲得';});}
 }
 function startNextSeason0(){
