@@ -1351,6 +1351,7 @@ function openSummer(){
  S.offers=genOffers().slice(0,2);S.cands=[];S.picked=[];S.scoutLeft=3;S.scoutQ=null;
  renderOffFromState();
  if(!S.offers.length)genCands();
+ gemAnnounce();
  saveGame('off');
 }
 function aclReward(){
@@ -3375,9 +3376,16 @@ function renderOffSquad(){
  $('o-squad').innerHTML=rh;
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
 }
+function gemAnnounce(){
+ var ids=S.gemNews||[];if(!ids.length)return;S.gemNews=[];
+ var ps=(S.youth||[]).filter(function(p){return ids.indexOf(p.id)>-1;});if(!ps.length)return;
+ var txt=ps.map(function(p){return esc(p.name)+'（'+POSNAME[p.pos]+'・'+p.age+'歳・総合'+p.ovr+'・将来性'+p.pot+'）';}).join('、');
+ S.offGrowth=(S.offGrowth||'')+'<li>⭐ ユースに逸材が入団しました：'+txt+'</li>';$('o-growth').innerHTML=S.offGrowth;
+ note('⭐ ユースに<b>逸材</b>が入団しました！<br><br>'+txt+'<br><br>将来は世界トップ級に育つ可能性があります。ユースで育てるか、早めにトップへ昇格させるか考えましょう。');
+}
 function openOffseason(){S.univNote='';openOffseason0();if(S.univNote){S.offGrowth=(S.offGrowth||'')+'<li>🎓 大学で力をつけた元ユースの'+esc(S.univNote)+'が、古巣への復帰を希望しています。獲得候補に入りました。</li>';$('o-growth').innerHTML=S.offGrowth;}var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
  if(gone.length||wev){S.offGrowth=(S.offGrowth||'')+(gone.length?'<li>ユースの'+gone.map(esc).join('、')+'がトップ昇格できず退団し、大学へ進学しました。</li>':'')+(wev?'<li>'+wev[0]+'</li>':'');$('o-growth').innerHTML=S.offGrowth;}
- coachPhase();}
+ coachPhase();gemAnnounce();}
 function openOffseason0(){
  var moved=S.pendingMove||0;
  S.lastMoved=moved;
@@ -3640,7 +3648,7 @@ function youthIntake(n){
  for(var i=0;i<n;i++){REAL_OFF=true;var p=makePlayer0(-20+lv*3,'',15+rnd(2));REAL_OFF=false;
   if(p.foreign){delete usedNames[p.name];p.foreign=false;p.nat='';p.name=uniqueName();}
   p.youth=true;p.pot=p.ovr+12+rnd(9)+YLV[lv].pot;p.fee=0;p.route='ユース出身';
-  if(Math.random()<YLV[lv].gem){p.gem=true;p.pot+=14;p.legend='逸材';}
+  if(Math.random()<YLV[lv].gem){p.gem=true;p.pot+=14;p.legend='逸材';S.gemNews=(S.gemNews||[]).concat([p.id]);}
   S.youth.push(p);}
 }
 function youthGrow(){
@@ -3663,7 +3671,7 @@ function renderYouth(){
  YLV.forEach(function(y,i){h+='<button type="button" class="'+(i===lv?'on':'')+'" data-ylv="'+i+'">'+y.n+'</button>';});
  h+='</div><ul class="growth" style="margin-top:8px">';
  (S.youth||[]).slice().sort(function(a,b){return b.pot-a.pot;}).forEach(function(p){var inC=(S.cands||[]).indexOf(p)>-1;
-  h+='<li><b>'+esc(p.name)+'</b>（'+POSJ[p.pos]+'・'+p.age+'歳）総合 '+p.ovr+'・将来性 '+p.pot+' <button class="btn ghost small" data-yup="'+p.id+'" style="width:auto;padding:5px 10px;margin-left:6px"'+(inC?' disabled':'')+'>'+(inC?'昇格候補に追加ずみ':'トップ昇格候補へ')+'</button></li>';});
+  h+='<li>'+(p.gem?'⭐ ':'')+'<b>'+esc(p.name)+'</b>'+(p.gem?' <span class="tag gold">逸材</span>':'')+'（'+POSJ[p.pos]+'・'+p.age+'歳）総合 '+p.ovr+'・将来性 '+p.pot+' <button class="btn ghost small" data-yup="'+p.id+'" style="width:auto;padding:5px 10px;margin-left:6px"'+(inC?' disabled':'')+'>'+(inC?'昇格候補に追加ずみ':'トップ昇格候補へ')+'</button></li>';});
  h+='</ul>';
  if(!(S.youth||[]).length)h+='<p class="sub" style="margin:0">ユース選手はいません。</p>';
  $('o-youth').innerHTML=h;
@@ -4120,7 +4128,7 @@ var SELDIFF='n';
 var DDESC={n:'原作どおりのバランス。見送り10回。',h:'見送り6回。ドラフトの約半分は実際の実力分布から出るので当たりが減る。AIクラブが少し強い。',l:'見送り3回。ドラフトの大半が実際の実力分布から出る。AIクラブが強い。'};
 (function(){var bs=document.querySelectorAll('#diffsel button');for(var i=0;i<bs.length;i++)bs[i].addEventListener('click',function(){SELDIFF=this.getAttribute('data-d');for(var j=0;j<bs.length;j++){bs[j].classList.toggle('on',bs[j]===this);bs[j].setAttribute('aria-pressed',bs[j]===this?'true':'false');}$('diffdesc').textContent=DDESC[SELDIFF];});})();
 $('btn-start').addEventListener('click',function(){
- var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+ var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
  if(readSave())ask('今のセーブデータを消して、新しく始めますか？','新しく始める',go,true);else go();
 });
 $('btn-continue').addEventListener('click',function(){restoreGame();});
