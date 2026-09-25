@@ -1416,6 +1416,7 @@ function tags(p){
  if(p.age>=33)o.push(['ベテラン',0]);
  if(p.ovr>=80)o.push(['主力級',1]);
  if(!p.prospect&&p.age<=22&&p.pot-p.ovr>=9)o.push(['大器',1]);
+ if(p.youth)o.push(['ユース',1]);
  if(p.retiring)o.push(['引退示唆',0]);
  return o;
 }
@@ -3374,8 +3375,8 @@ function renderOffSquad(){
  $('o-squad').innerHTML=rh;
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
 }
-function openOffseason(){openOffseason0();var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
- if(gone.length||wev){S.offGrowth=(S.offGrowth||'')+(gone.length?'<li>ユースの'+gone.map(esc).join('、')+'がトップ昇格できず退団しました。</li>':'')+(wev?'<li>'+wev[0]+'</li>':'');$('o-growth').innerHTML=S.offGrowth;}
+function openOffseason(){S.univNote='';openOffseason0();if(S.univNote){S.offGrowth=(S.offGrowth||'')+'<li>🎓 大学で力をつけた元ユースの'+esc(S.univNote)+'が、古巣への復帰を希望しています。獲得候補に入りました。</li>';$('o-growth').innerHTML=S.offGrowth;}var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
+ if(gone.length||wev){S.offGrowth=(S.offGrowth||'')+(gone.length?'<li>ユースの'+gone.map(esc).join('、')+'がトップ昇格できず退団し、大学へ進学しました。</li>':'')+(wev?'<li>'+wev[0]+'</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  coachPhase();}
 function openOffseason0(){
  var moved=S.pendingMove||0;
@@ -3529,6 +3530,7 @@ function genCands(){
   stp.star=true;
   S.cands.push(stp);S.candTag.push('注目のスター選手（'+stp.route+'）');
  }
+ if(S.window!=='summer'){var ur=univReturns();ur.forEach(function(p){S.cands.push(p);S.candTag.push('🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし・本人は復帰を希望）');});if(ur.length)S.univNote=ur.map(function(p){return p.name+'（'+p.univ+'）';}).join('、');}
  var r16=(S.cups&&S.cups.emp&&S.cups.emp.r16)||[];
  for(i=0;i<r16.length;i++)if(r16[i].univ){S.cands.push(makeProspect(r16[i].name));S.candTag.push('特別指定・天皇杯ベスト16');}
  S.picked=[];S.cap=3+S.holes.length;S.minPick=S.holes.length;S.candBase=base;
@@ -3570,8 +3572,8 @@ function scoutRun(q){
   res.push(p);
  }
  if(!res.length)return 0;
- var keep=(S.cands||[]).filter(function(p){return p.youth;});
- S.cands=res.concat(keep);S.candTag=res.map(function(p){var f=style&&p.pos!=='GK'?fitOf(p,{tac:style}):-1;return '方針に合致：'+esc(p.rclub||'')+(f>=0?'　'+TACJ[style]+fitMark(f):'');}).concat(keep.map(function(){return 'ユース昇格（移籍金なし）';}));
+ var keep=(S.cands||[]).filter(function(p){return p.youth||p.alum;});
+ S.cands=res.concat(keep);S.candTag=res.map(function(p){var f=style&&p.pos!=='GK'?fitOf(p,{tac:style}):-1;return '方針に合致：'+esc(p.rclub||'')+(f>=0?'　'+TACJ[style]+fitMark(f):'');}).concat(keep.map(function(p){return p.alum?'🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし）':'ユース昇格（移籍金なし）';}));
  S.picked=[];S.scoutLeft=(S.scoutLeft==null?3:S.scoutLeft)-1;S.scoutQ=q;
  renderCands();saveGame('off');
  return res.length;
@@ -3631,23 +3633,33 @@ function randomEvent(when){
  for(var k=0;k<5;k++){var r=pick(E)();if(r)return r;}
  return null;
 }
-var YLV=[{n:'最小限',c:.05,g:0,in:1},{n:'標準',c:.3,g:1,in:2},{n:'強化',c:.8,g:2,in:3},{n:'最高',c:2,g:3,in:4}];
-function ycost(){return r2(YLV[S.youthLv||0].c*(S.div>100?3:1));}
+var YLV=[{n:'最小限',c:.05,g:0,in:1,pot:0,gem:.01},{n:'標準',c:.3,g:0,in:2,pot:2,gem:.015},{n:'強化',c:.8,g:1,in:3,pot:3,gem:.02},{n:'最高',c:2,g:1,in:3,pot:5,gem:.03}];
+function ycost(){return r2(YLV[S.youthLv||0].c*(S.div>100?4:{1:2.5,2:1.5,3:1}[S.div]||1));}
 function youthIntake(n){
  S.youth=S.youth||[];var lv=S.youthLv||0;
  for(var i=0;i<n;i++){REAL_OFF=true;var p=makePlayer0(-20+lv*3,'',15+rnd(2));REAL_OFF=false;
   if(p.foreign){delete usedNames[p.name];p.foreign=false;p.nat='';p.name=uniqueName();}
-  p.youth=true;p.pot=p.ovr+18+rnd(10)+lv*3;p.fee=0;p.route='ユース出身';S.youth.push(p);}
+  p.youth=true;p.pot=p.ovr+12+rnd(9)+YLV[lv].pot;p.fee=0;p.route='ユース出身';
+  if(Math.random()<YLV[lv].gem){p.gem=true;p.pot+=14;p.legend='逸材';}
+  S.youth.push(p);}
 }
 function youthGrow(){
  var lv=S.youthLv||0,out=[];
  (S.youth||[]).forEach(function(p){p.age++;var g=Math.min(Math.max(0,p.pot-p.ovr),2+rnd(4)+YLV[lv].g);p.mod+=g;p.ovr=ovrFor(p,p.pos);});
- S.youth=(S.youth||[]).filter(function(p){if(p.age>=19){out.push(p.name);return false;}return true;});
+ S.youth=(S.youth||[]).filter(function(p){if(p.age>=19){out.push(p.name);var u=(S.univs&&S.univs.length)?pick(S.univs).name:'大学';S.univAlumni=S.univAlumni||[];S.univAlumni.push({p:p,u:u,back:S.year+3+rnd(2)});return false;}return true;});
  youthIntake(YLV[lv].in);
  return out;
 }
+function univReturns(){
+ var got=[];S.univAlumni=S.univAlumni||[];
+ S.univAlumni=S.univAlumni.filter(function(a){
+  if(a.back>S.year)return true;
+  var p=a.p,yrs=a.back-(S.year-0);p.age=22+rnd(2);var g=Math.min(Math.max(0,p.pot-p.ovr),4+rnd(7));p.mod+=g;p.ovr=ovrFor(p,p.pos);
+  p.youth=false;p.univ=a.u;p.fee=0;p.nego='ok';p.route=a.u+'を経てユースから復帰';p.alum=true;got.push(p);return false;});
+ return got;
+}
 function renderYouth(){
- var lv=S.youthLv||0,h='<p class="sub" style="margin:0">投資レベル：<b>'+YLV[lv].n+'</b>　年間 '+feeTxt(ycost())+'　（毎冬'+YLV[lv].in+'人が入団、レベルが高いほど伸びる）</p><div class="scpos" style="margin-top:6px">';
+ var lv=S.youthLv||0,h='<p class="sub" style="margin:0">投資レベル：<b>'+YLV[lv].n+'</b>　年間 '+feeTxt(ycost())+'　（毎冬'+YLV[lv].in+'人が入団。レベルが高いほど伸び、まれに「逸材」が入る）</p>'+((S.univAlumni||[]).length?'<p class="sub" style="margin:4px 0 0;font-size:12px">大学に進んだ元ユース：'+S.univAlumni.map(function(a){return esc(a.p.name)+'（'+esc(a.u)+'・'+a.back+'年目に卒業）';}).join('、')+'</p>':'')+'<div class="scpos" style="margin-top:6px">';
  YLV.forEach(function(y,i){h+='<button type="button" class="'+(i===lv?'on':'')+'" data-ylv="'+i+'">'+y.n+'</button>';});
  h+='</div><ul class="growth" style="margin-top:8px">';
  (S.youth||[]).slice().sort(function(a,b){return b.pot-a.pot;}).forEach(function(p){var inC=(S.cands||[]).indexOf(p)>-1;
@@ -3735,6 +3747,7 @@ function startNextSeason0(){
  for(i=0;i<S.releasing.length;i++)
   for(j=0;j<S.squad.length;j++)if(S.squad[j].id===S.releasing[i]){S.squad.splice(j,1);break;}
  for(i=0;i<S.picked.length;i++){var np=S.cands[S.picked[i]];np.joined=S.year;np.route=np.prospect?np.univ+'から特別指定':S.year+'年目のオフに獲得';S.squad.push(np);
+  if(np.alum){np.alum=false;}
   if(np.youth){np.youth=false;np.route='ユースから昇格';S.youth=(S.youth||[]).filter(function(q){return q!==np;});}
   if(np.real!=null){S.realUsed[np.real]=1;realFree(np.name);}if(np.eu!=null){S.euUsed=S.euUsed||{};S.euUsed[np.eu]=1;}if(np.os!=null){S.osUsed=S.osUsed||{};S.osUsed['jp'+np.os]=1;}}
  S.releasing=[];S.picked=[];S.holes=[];
