@@ -103,6 +103,8 @@ p{margin:0 0 .8em;}
 .scpos{display:flex;flex-wrap:wrap;gap:6px;}
 .scpos button{flex:1 0 20%;padding:7px 0;border:1.5px solid var(--line);border-radius:3px;background:transparent;color:var(--chalk);font:inherit;font-weight:700;cursor:pointer;}
 .scpos button.on{background:var(--amber);border-color:var(--amber);color:var(--ink);}
+.loanbtn{display:inline-block;margin:4px 0 0;padding:3px 8px;font:inherit;font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:3px;background:transparent;color:var(--chalk);cursor:pointer;}
+.loanbtn:focus-visible{outline:2px solid var(--amber);}
 .btn.ghost{background:transparent;color:var(--chalk);border:1.5px solid var(--line);}
 .btn.small{padding:11px;font-size:14px;}
 .btn:active{transform:translateY(1px);}
@@ -1354,6 +1356,45 @@ function openSummer(){
  gemAnnounce();
  saveGame('off');
 }
+function minShare(p){var m=(p.ls&&p.ls.min)||0;return m/(Math.max(1,S.rounds||38)*90);}
+function growBonus(p){
+ var b=0,m=minShare(p);
+ if(p.age<=23){b+=m>=.5?1:m>=.25?0:-1;if(S.mgr){if(S.mgr.r>=4)b+=1;else if(S.mgr.r>=3&&Math.random()<.5)b+=1;}}
+ else if(p.age<=27&&m>=.6&&Math.random()<.5)b+=1;
+ return b;
+}
+function stAdd(p,k,v){p.st[k]=clamp(p.st[k]+v,22,99);}
+function growApply(p,ch){
+ p.mod+=ch;
+ if(p.age<=23&&ch>0){stAdd(p,pick(['SPD','STA','DRI','ATK','PHY']),1);}
+ else if(p.age>=30){stAdd(p,'SPD',-(1+rnd(2)));stAdd(p,'STA',-1);if(p.age>=33)stAdd(p,'PHY',-1);stAdd(p,'JDG',1);stAdd(p,'POS',1);}
+}
+function loanGrowth(q,dy){
+ var g=0,a=q.age-dy,ov=q.ovr;
+ for(var y=0;y<dy;y++){a++;var ch=a<=23?1+rnd(4)+1:a<=27?rnd(3):a<=30?rnd(2)-1:-(1+rnd(3));if(ch>0&&ov+g>=q.pot)ch=rnd(2);g+=ch;}
+ return g;
+}
+function loanDest(p){
+ var cs=S.div>100?divClubs(S.div).filter(function(c){return c.st<divAvg(S.div);}):(S.div<3?divClubs(S.div+1):divClubs(3).filter(function(c){return c.st<divAvg(3);}));
+ if(!cs.length)cs=S.stock||[];
+ return cs.length?pick(cs).name:'JFLのクラブ';
+}
+function loanOut(id){
+ var p=playerById(id);if(!p)return;
+ var dur=p.age<=21?2:1,club=loanDest(p),fee=r2(Math.max(.02,salOf(p)*.3));
+ ask(esc(p.name)+'（'+POSJ[p.pos]+'・'+p.age+'歳・総合'+p.ovr+'）を<b>'+esc(club)+'</b>へ'+dur+'年間のレンタルに出しますか？<br>試合経験を積んで成長して戻ってきます（年俸の負担なし・レンタル料 '+feeTxt(fee)+'）。<br>空いた枠は獲得候補で埋める必要があります。','レンタルに出す',function(){
+  var i=S.squad.indexOf(p);if(i<0)return;S.squad.splice(i,1);
+  S.loans=S.loans||[];S.loans.push({p:p,back:S.year+dur,club:club,dur:dur});
+  S.holes=S.holes||[];S.holes.push(p.pos);S.money=r2((S.money||0)+fee);S.saleIncome=r2((S.saleIncome||0)+fee);
+  S.departed=(S.departed||[]).concat([p.name+'（'+club+'へ'+dur+'年レンタル）']);
+  if(S.cands&&S.cands.length){S.cap=(S.cap||3)+1;S.minPick=(S.minPick||0)+1;renderCands();}
+  renderOffSquad();renderFin();saveGame('off');
+ });
+}
+document.addEventListener('click',function(e){
+ var b=e.target.closest&&e.target.closest('[data-loan]');if(!b)return;
+ e.stopPropagation();e.preventDefault();loanOut(+b.getAttribute('data-loan'));
+},true);
 function aclReward(){
  var r=S.lastACL||'';
  if(!r)return null;
@@ -3201,8 +3242,9 @@ function ageSquad(){
   else if(p.age<=30)ch=rnd(3)-2;
   else if(p.age<=33)ch=-(1+rnd(3));
   else ch=-(2+rnd(5));
+  ch+=growBonus(p);
   if(ch>0&&p.ovr>=p.pot)ch=rnd(2);
-  p.mod+=ch;p.temp=0;p.slumpUntil=0;p.ovr=ovrFor(p,p.pos);
+  growApply(p,ch);p.temp=0;p.slumpUntil=0;p.ovr=ovrFor(p,p.pos);
   if(Math.abs(p.ovr-before)>=2)lines.push({n:p.name,age:p.age,from:before,to:p.ovr});
  }
  lines.sort(function(a,b){return Math.abs(b.to-b.from)-Math.abs(a.to-a.from);});
@@ -3371,9 +3413,9 @@ function renderOffSquad(){
  for(var r=0;r<sq.length;r++){
   var rp=sq[r],inXI=S.slots.indexOf(rp.id)>-1;
   if(rp.pos!==rcur){rh+='<li class="rhead"><span class="rp">'+POSJ[rp.pos]+'</span><span>'+POSNAME[rp.pos]+'</span><span></span></li>';rcur=rp.pos;}
-  rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small></span><span class="rv">'+rp.ovr+'</span></li>';
+  rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small>'+(rp.age<=27?'<button type="button" class="loanbtn" data-loan="'+rp.id+'">レンタルに出す</button>':'')+'</span><span class="rv">'+rp.ovr+'</span></li>';
  }
- $('o-squad').innerHTML=rh;
+ $('o-squad').innerHTML=rh+((S.loans||[]).length?'<li class="rhead"><span class="rp"></span><span>レンタル中：'+S.loans.map(function(L){return esc(L.p.name)+'（'+esc(L.club)+'・'+L.back+'年目に復帰）';}).join('、')+'</span><span></span></li>':'');
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
 }
 function gemAnnounce(){
@@ -3400,9 +3442,9 @@ function openOffseason0(){
    var L=S.loans[li];
    if(S.year>=L.back){
     var q=L.p;
-    q.age+=2;q.mod+=6+rnd(9);q.temp=0;q.slumpUntil=0;q.injuredUntil=0;q.carry=0;q.cond=100;
+    var dy=L.dur||2;q.age+=dy;q.mod+=L.dur?loanGrowth(q,dy):6+rnd(9);q.temp=0;q.slumpUntil=0;q.injuredUntil=0;q.carry=0;q.cond=100;
     q.s=blankStats();q.ls=blankStats();q.ovr=ovrFor(q,q.pos);
-    q.route=L.club+'で武者修行（2年）→ 復帰';q.joined=S.year;
+    q.route=L.club+'で武者修行（'+(L.dur||2)+'年）→ 復帰';q.joined=S.year;
     S.squad.push(q);S.returns.push(q);S.loans.splice(li,1);
    }
   }
