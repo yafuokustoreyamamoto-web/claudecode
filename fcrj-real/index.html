@@ -1431,7 +1431,7 @@ function loanExec(){
  S.loans=S.loans||[];S.loans.push({p:p,back:S.year+L.dur,club:o.name,dur:L.dur,pt:o.pt});
  S.holes=S.holes||[];S.holes.push(p.pos);S.money=r2((S.money||0)+fee);S.saleIncome=r2((S.saleIncome||0)+fee);
  S.departed=(S.departed||[]).concat([p.name+'（'+o.name+'へ'+L.dur+'年レンタル）']);
- if(S.cands&&S.cands.length){S.cap=(S.cap||3)+1;S.minPick=(S.minPick||0)+1;renderCands();}
+ if(S.cands&&S.cands.length){S.cap=(S.cap||3)+1;if(!S.realStart)S.minPick=(S.minPick||0)+1;renderCands();}
  S.loanSel=null;renderLoanPanel();renderOffSquad();renderFin();saveGame('off');
 }
 document.addEventListener('click',function(e){
@@ -1506,6 +1506,21 @@ function quotaPick(L,posOf,valOf){
  L.slice().sort(function(a,b){return valOf(b)-valOf(a);}).forEach(function(i){if(!used[i]&&out.length<SQN){out.push(i);used[i]=1;}});
  return out.slice(0,SQN);
 }
+function relCost(p){return r2(salOf(p)*divPay()*(p.salF||1)*.5);}
+function releasePlayer(id){
+ var p=playerById(id);if(!p)return;var c=relCost(p);
+ ask(esc(p.name)+'（'+POSJ[p.pos]+'・'+p.age+'歳・総合'+p.ovr+'）との契約を解除しますか？<br>違約金 '+feeTxt(c)+'（年俸の半年分）を支払います。','契約を解除する',function(){
+  var i=S.squad.indexOf(p);if(i<0)return;S.squad.splice(i,1);
+  var si=S.slots.indexOf(p.id);if(si>-1)S.slots[si]=null;
+  S.money=r2((S.money||0)-c);S.buyCost=r2((S.buyCost||0)+c);
+  S.departed=(S.departed||[]).concat([p.name+'（契約解除）']);
+  renderOffSquad();renderFin();if(S.cands&&S.cands.length)updateCandCount();saveGame('off');
+ },true);
+}
+document.addEventListener('click',function(e){
+ var b=e.target.closest&&e.target.closest('[data-rel]');if(!b)return;
+ e.stopPropagation();e.preventDefault();releasePlayer(+b.getAttribute('data-rel'));
+},true);
 function aclReward(){
  var r=S.lastACL||'';
  if(!r)return null;
@@ -3525,7 +3540,7 @@ function renderOffSquad(){
  for(var r=0;r<sq.length;r++){
   var rp=sq[r],inXI=S.slots.indexOf(rp.id)>-1;
   if(rp.pos!==rcur){rh+='<li class="rhead"><span class="rp">'+POSJ[rp.pos]+'</span><span>'+POSNAME[rp.pos]+'</span><span></span></li>';rcur=rp.pos;}
-  rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small>'+(rp.age<=27?'<button type="button" class="loanbtn" data-loan="'+rp.id+'">レンタルに出す</button>':'')+'</span><span class="rv">'+rp.ovr+'</span></li>';
+  rh+='<li data-pid="'+rp.id+'"><span class="rp"></span><span>'+(rp.foreign?natOf(rp).f+' ':'')+esc(rp.name)+'<small>'+rp.age+'歳'+(rp.pos2?' ・'+POSJ[rp.pos2]+(rp.pos3?'/'+POSJ[rp.pos3]:'')+'も◎':'')+(inXI?' ・スタメン':' ・控え')+'　通算'+rp.c.g+'得点</small>'+(rp.age<=27?'<button type="button" class="loanbtn" data-loan="'+rp.id+'">レンタルに出す</button>':'')+(S.realStart?' <button type="button" class="loanbtn" data-rel="'+rp.id+'">契約解除</button>':'')+'</span><span class="rv">'+rp.ovr+'</span></li>';
  }
  $('o-squad').innerHTML=rh+((S.loans||[]).length?'<li class="rhead"><span class="rp"></span><span>レンタル中：'+S.loans.map(function(L){return esc(L.p.name)+'（'+esc(L.club)+'・'+L.back+'年目に復帰）';}).join('、')+'</span><span></span></li>':'');
  $('o-squad-sub').textContent=S.squad.length+'人'+(S.holes.length?'（引退・移籍で'+S.holes.length+'人減）':'')+'。この顔ぶれを見ながら候補を選びます。';
@@ -3705,7 +3720,7 @@ function genCands0(){
  if(S.window!=='summer'){var ur=univReturns();ur.forEach(function(p){S.cands.push(p);S.candTag.push('🎓 元ユース・'+esc(p.univ)+'経由（移籍金なし・本人は復帰を希望）');});if(ur.length)S.univNote=ur.map(function(p){return p.name+'（'+p.univ+'）';}).join('、');}
  var r16=(S.cups&&S.cups.emp&&S.cups.emp.r16)||[];
  for(i=0;i<r16.length;i++)if(r16[i].univ){S.cands.push(makeProspect(r16[i].name));S.candTag.push('特別指定・天皇杯ベスト16');}
- S.picked=[];S.cap=3+S.holes.length;S.minPick=S.holes.length;S.candBase=base;
+ S.picked=[];S.cap=3+S.holes.length;S.minPick=S.realStart?0:S.holes.length;S.candBase=base;
  renderCands();
  saveGame('off');
 }
@@ -3852,16 +3867,18 @@ function appendReleased(){
  S.cands=S.cands||[];S.candTag=S.candTag||[];
  var ml=myLv(),pool=[],i,own={};S.squad.concat(S.cands).forEach(function(p){own[p.name]=1;});
  if(S.div<=3){
-  var P=REAL.P,med={};
-  for(i=0;i<P.length;i++){(med[P[i][1]]=med[P[i][1]]||[]).push(P[i][6]);}
-  for(var k in med){med[k].sort(function(a,b){return b-a;});med[k]=med[k][Math.min(13,med[k].length-1)];}
+  var P=REAL.P,by={},rk={};
+  for(i=0;i<P.length;i++)(by[P[i][1]]=by[P[i][1]]||[]).push(i);
+  for(var k in by){by[k].sort(function(a,b){return P[b][6]-P[a][6];});by[k].forEach(function(ix,n){rk[ix]=n+1;});}
   for(i=0;i<P.length;i++){var r=P[i];if(S.realUsed[i]||own[r[0]])continue;var lv=jLv(r[1]);if(lv>ml&&Math.random()>.1)continue;
-   var why=r[2]>=31?'age':r[6]<med[r[1]]?'bench':null;if(!why&&Math.random()<.04)why='slump';if(!why)continue;pool.push({k:'j',i:i,g:r[6],fee:0,why:why});}
+   var why=(r[2]>=33&&rk[i]>11)?'age':(rk[i]>18&&r[2]>=21)?'bench':null;if(!why&&rk[i]>11&&r[2]>=21&&Math.random()<.03)why='slump';if(!why)continue;pool.push({k:'j',i:i,g:r[6],fee:0,why:why});}
  }else{
-  S.euUsed=S.euUsed||{};REALEU.P.forEach(function(r,i){if(S.euUsed[i]||own[r[0]])return;var lg=REALEU.C[r[1]][1];if(101+LGC.indexOf(lg)!==S.div&&Math.random()>.3)return;
-   var why=r[2]>=31?'age':r[5]<88?'bench':null;if(!why&&Math.random()<.04)why='slump';if(!why)return;pool.push({k:'eu',i:i,g:r[5],fee:0,why:why});});
+  S.euUsed=S.euUsed||{};var EB={},ER={};REALEU.P.forEach(function(r,i){(EB[r[1]]=EB[r[1]]||[]).push(i);});
+  for(var ek in EB){EB[ek].sort(function(a,b){return REALEU.P[b][5]-REALEU.P[a][5];});EB[ek].forEach(function(ix,n){ER[ix]=n+1;});}
+  REALEU.P.forEach(function(r,i){if(S.euUsed[i]||own[r[0]])return;var lg=REALEU.C[r[1]][1];if(101+LGC.indexOf(lg)!==S.div&&Math.random()>.3)return;
+   var why=(r[2]>=33&&ER[i]>11)?'age':(ER[i]>18&&r[2]>=21)?'bench':null;if(!why&&ER[i]>11&&r[2]>=21&&Math.random()<.03)why='slump';if(!why)return;pool.push({k:'eu',i:i,g:r[5],fee:0,why:why});});
  }
- pool.sort(function(a,b){return (b.g+Math.random()*6)-(a.g+Math.random()*6);});
+ shuffle(pool);
  var WHY={age:'年齢を理由に戦力外',bench:'出場機会がなく構想外',slump:'調子を崩して構想外'},n=0;
  for(i=0;i<pool.length&&n<6;i++){
   var o=pool[i],p=scoutBuild(o);p.fee=0;p.released=o.why;
@@ -3893,9 +3910,10 @@ function updateCandCount(){
  var cost=r2(S.picked.reduce(function(s,k){return s+feeOfP(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
  $('btn-tolist').disabled=n<S.minPick||over;
  $('o-count').textContent+='　移籍金 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0);
- $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
+ $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
 }
 function openRelease(){
+ if(S.realStart){startNextSeason();return;}
  var need=S.picked.length-S.holes.length;
  if(need<=0){startNextSeason();return;}
  S.releasing=[];
