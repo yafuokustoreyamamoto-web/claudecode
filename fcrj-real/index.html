@@ -1289,7 +1289,7 @@ function fitOf(p,m){m=m||S.mgr;if(!m||!p||p.pos==='GK')return -1;var k=TACK[m.ta
 function fitMark(v){return v<0?'':['△','○','◎'][v];}
 function mgrMul(lu){var m=S.mgr;if(!m)return 1;var v=1+(m.r-2)*.01+(S.form===m.form?.01:0)+(S.tac===m.tac?.015:0),n=0,f=0;
  (lu||[]).forEach(function(o){if(o.p&&o.sp!=='GK'){n++;if(fitOf(o.p)===2)f++;}});if(n)v+=f/n*.02;return v;}
-function salOf(p){var x=Math.max(0,p.ovr-55);return Math.max(.03,r2(.0008*Math.pow(x,2.15)));}
+function salOf(p){if(p.age<=18)return .01;var x=Math.max(0,p.ovr-55);return Math.max(.03,r2(.0008*Math.pow(x,2.15)));}
 function divPay(d){return lgx(d||S.div).pay;}
 function payroll(){return r2(S.squad.reduce(function(s,p){return s+salOf(p)*(p.salF||1);},0)*divPay());}
 function payF(sc){return clamp(Math.pow(sc||1,.7),.35,2.2);}
@@ -1499,7 +1499,7 @@ document.addEventListener('click',function(e){
  if(t.closest('#btn-draftmode')){var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(er){}S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
   if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
 });
-var SQN=28,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
+var SQN=99,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
 function quotaPick(L,posOf,valOf){
  var out=[],used={},cnt={};
  L.slice().sort(function(a,b){return valOf(b)-valOf(a);}).forEach(function(i){var ps=posOf(i);if((cnt[ps]||0)<(QUOTA[ps]||0)){out.push(i);used[i]=1;cnt[ps]=(cnt[ps]||0)+1;}});
