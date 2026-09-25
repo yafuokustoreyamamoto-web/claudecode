@@ -3377,7 +3377,7 @@ function genOffers(){
  // 中東（オイルマネー）
  var meC=(ACLD.west.SA.c+','+ACLD.west.AE.c+','+ACLD.west.QA.c).split(',');
  var sm=S.window==='summer',me=(S.div<=2||S.div>100)?S.squad.filter(function(p){if(used[p.id]||p.age>33)return false;var st=sm?p.s:p.ls;if(!st)return false;var k=sm?.5:1;return st.g>=12*k||st.a>=10*k||(p.pos==='GK'&&st.cs>=12*k)||(!sm&&(p.titles||[]).some(function(t){return t.indexOf(S.year-1+'年目')===0;}));}).sort(function(a,b){return b.ovr-a.ovr;}):[];
- if(me.length&&Math.random()<.5){var m0=me[0];used[m0.id]=1;
+ if(me.length&&Math.random()<.2){var m0=me[0];used[m0.id]=1;
   offers.push({p:m0,club:pick(meC),fromDiv:0,area:'me',tier:'ME',fee:r2(feeOf([.5,3],m0.ovr,70)*(4+Math.random()*4)*(S.div>100?4:1)),state:'open'});}
  // アジア
  var as=S.squad.filter(function(p){return !used[p.id]&&p.age>=25&&p.age<=33&&p.ovr>=62;});
