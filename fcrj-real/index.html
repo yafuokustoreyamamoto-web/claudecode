@@ -1337,7 +1337,7 @@ function r2(v){return Math.round(v*100)/100;}
 function moneyTxt(v){return (v<0?'▲':'')+feeTxt(Math.abs(v)||0);}
 function mgrObj(m){var a=m[3]+Math.max(0,(S.year||1)-1);return {n:m[0],nk:m[1],nj:m[2],age:a,form:m[4],tac:m[5],r:Math.max(.6,Math.round((m[6]-Math.max(0,a-63)*.05)*100)/100),club:m[7],est:m[8]};}
 function mgrSal(m){return r2(.1+.25*Math.pow(m.r,1.5));}
-function mgrByClub(name){for(var i=0;i<REAL.M.length;i++)if(REAL.M[i][7]===name)return mgrObj(REAL.M[i]);return null;}
+function mgrByClub(name){var R=S.mgrRet||{};for(var i=0;i<REAL.M.length;i++)if(REAL.M[i][7]===name){if(!R[REAL.M[i][0]])return mgrObj(REAL.M[i]);var fr=(typeof freeMgrs==='function'&&S.pool)?freeMgrs():[];return fr.length?pick(fr):null;}return null;}
 function allMgrs(){var R=S.mgrRet||{};return REAL.M.map(mgrObj).concat(S.extraMgrs||[]).filter(function(m){return !R[m.n];});}
 function freeMgrs(){var u={};(S.pool||[]).forEach(function(c){if(c.mgr)u[c.mgr.n]=1;});if(S.mgr)u[S.mgr.n]=1;return allMgrs().filter(function(m){return !u[m.n];});}
 function stars(r){var n=Math.round(r);return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n);}
@@ -1418,6 +1418,7 @@ function renderMgr(){
   var list=freeMgrs().map(function(x){return {m:x,from:null};});
   (S.pool||[]).forEach(function(c){if(c.mgr&&c.div>=S.div&&c.div<=3)list.push({m:c.mgr,from:c});});
   list.forEach(function(o){var cost=mgrSal(o.m)*.5+(o.from?mgrSal(o.m)*.8:0)+(S.mgr?mgrSal(S.mgr)*.5:0);o.cost=r2(cost);});
+  list=list.filter(function(o){return !(S.mgrRet||{})[o.m.n];});
   if(!S.mgrListIds){var sh=shuffle(list.slice());S.mgrListIds=sh.slice(0,12).map(function(o){return o.m.n;});}
   list=list.filter(function(o){return S.mgrListIds.indexOf(o.m.n)>-1;});
   list.sort(function(a,b){return b.m.r-a.m.r;});
@@ -1656,9 +1657,9 @@ function mgrTick(){
  function fresh(m){if(!m)return m;var row=null;REAL.M.forEach(function(x){if(x[0]===m.n)row=x;});if(row)return mgrObj(row);var e=null;(S.extraMgrs||[]).forEach(function(x){if(x.n===m.n)e=x;});return e||m;}
  function retires(m){return m&&m.age>=66&&Math.random()<.12+(m.age-66)*.07;}
  (S.pool||[]).forEach(function(c){if(!c.mgr||c.div>100)return;var nm=fresh(c.mgr);mgrStr(c,c.mgr,-1);c.mgr=nm;mgrStr(c,nm,1);
-  if(retires(nm)){R[nm.n]=1;var fr=freeMgrs().sort(function(a,b){return b.r-a.r;});var nx=fr.length?fr[Math.min(fr.length-1,rnd(6))]:null;mgrStr(c,nm,-1);c.mgr=nx;if(nx)mgrStr(c,nx,1);news.push(esc(nm.n)+'監督（'+nm.age+'歳・'+esc(c.name)+'）が勇退'+(nx?'、後任は'+esc(nx.n):''));}});
+  if(R[nm.n]||retires(nm)){R[nm.n]=1;var fr=freeMgrs().sort(function(a,b){return b.r-a.r;});var nx=fr.length?fr[Math.min(fr.length-1,rnd(6))]:null;mgrStr(c,nm,-1);c.mgr=nx;if(nx)mgrStr(c,nx,1);news.push(esc(nm.n)+'監督（'+nm.age+'歳・'+esc(c.name)+'）が勇退'+(nx?'、後任は'+esc(nx.n):''));}});
  if(S.mgr){var me=fresh(S.mgr),dec=S.mgr.r-me.r;S.mgr=me;if(dec>0)news.push('あなたのクラブの'+esc(me.n)+'監督（'+me.age+'歳）は年齢とともに指導力が落ちてきています（評価 '+me.r.toFixed(1)+'）');
-  if(retires(me)){R[me.n]=1;var fr2=freeMgrs().filter(function(m){return m.r<=me.r+.3;}).sort(function(a,b){return b.r-a.r;});var nx2=fr2[0]||freeMgrs()[0]||null;S.mgr=nx2;S.mgrRetNote=esc(me.n)+'監督（'+me.age+'歳）が勇退しました。'+(nx2?'ひとまず'+esc(nx2.n)+'監督が就任します。「監督を探す」から変えられます。':'');news.push(S.mgrRetNote);}}
+  if(R[me.n]||retires(me)){R[me.n]=1;var fr2=freeMgrs().filter(function(m){return m.r<=me.r+.3;}).sort(function(a,b){return b.r-a.r;});var nx2=fr2[0]||freeMgrs()[0]||null;S.mgr=nx2;S.mgrRetNote=esc(me.n)+'監督（'+me.age+'歳）が勇退しました。'+(nx2?'ひとまず'+esc(nx2.n)+'監督が就任します。「監督を探す」から変えられます。':'');news.push(S.mgrRetNote);}}
  return news;
 }
 function newCoaches(n){
@@ -3758,7 +3759,7 @@ function gemAnnounce(){
  S.offGrowth=(S.offGrowth||'')+'<li>⭐ ユースに逸材が入団しました：'+txt+'</li>';$('o-growth').innerHTML=S.offGrowth;
  note('⭐ ユースに<b>逸材</b>が入団しました！<br><br>'+txt+'<br><br>将来は世界トップ級に育つ可能性があります。ユースで育てるか、早めにトップへ昇格させるか考えましょう。');
 }
-function openOffseason(){S.univNote='';var WT=worldTick();openOffseason0();var MT=mgrTick();if(S.univNote){S.offGrowth=(S.offGrowth||'')+'<li>🎓 大学で力をつけた元ユースの'+esc(S.univNote)+'が、古巣への復帰を希望しています。獲得候補に入りました。</li>';$('o-growth').innerHTML=S.offGrowth;}var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
+function openOffseason(){S.univNote='';var WT=worldTick();openOffseason0();var MT=mgrTick();S.mgrListIds=null;renderMgr();renderFin();if(S.univNote){S.offGrowth=(S.offGrowth||'')+'<li>🎓 大学で力をつけた元ユースの'+esc(S.univNote)+'が、古巣への復帰を希望しています。獲得候補に入りました。</li>';$('o-growth').innerHTML=S.offGrowth;}var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
  if(gone.length||wev){S.offGrowth=(S.offGrowth||'')+(gone.length?'<li>ユースの'+gone.map(esc).join('、')+'がトップ昇格できず退団し、大学へ進学しました。</li>':'')+(wev?'<li>'+wev[0]+'</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  var myRein=[];(S.retired||[]).forEach(function(x){var q=x.p,pk=Math.max(q.pk||0,q.ovr);REAL_OFF=true;var y=makePlayer0(-20,q.pos,16);REAL_OFF=false;delete usedNames[y.name];y.foreign=false;y.nat='';y.name=uniqueName();y.youth=true;y.pot=clamp(Math.round(pk+gauss()*2),50,95);y.fee=0;y.reinOf=q.name;y.route='ユース（'+q.name+'の生まれ変わり）';S.youth=(S.youth||[]).concat([y]);myRein.push(y);});
  var wl='';if(MT.length)wl+='<li>👴 監督の世代交代：'+MT.slice(0,6).join('／')+(MT.length>6?' ほか'+(MT.length-6)+'件':'')+'</li>';
@@ -3771,7 +3772,7 @@ function openOffseason(){S.univNote='';var WT=worldTick();openOffseason0();var M
  if(nc.length||mn.length){S.offGrowth=(S.offGrowth||'')+(mn.length?'<li>📰 監督人事：'+mn.slice(0,8).join('／')+(mn.length>8?' ほか'+(mn.length-8)+'件':'')+'</li>':'')+(nc.length?'<li>🎓 現役を退いた'+nc.map(esc).join('、')+'が監督として指導者の道へ。</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  S.mgrListIds=null;S.offGrowth=(S.offGrowth||'')+leadLine();$('o-growth').innerHTML=S.offGrowth;
  if(S.loanInBack&&S.loanInBack.length){S.offGrowth=(S.offGrowth||'')+'<li>🔁 レンタル期間満了：'+S.loanInBack.map(esc).join('、')+'。現有戦力の欄で<b>買い取る</b>か選べます（買い取らなければ保有元へ戻ります）。</li>';$('o-growth').innerHTML=S.offGrowth;S.loanInBack=[];}
- coachPhase();gemAnnounce();awakenAnnounce();}
+ coachPhase();gemAnnounce();awakenAnnounce();saveGame('off');}
 function openOffseason0(){
  var moved=S.pendingMove||0;
  S.lastMoved=moved;
