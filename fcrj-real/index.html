@@ -4107,7 +4107,7 @@ function renderFac(){
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-fac]');if(!b)return;var k=b.getAttribute('data-fac'),c=facCost(k);if(!c||c>(S.money||0))return;
  ask(FAC[k].n+'を'+(facLv(k)+1)+'段階目に強化しますか？<br>投資 '+feeTxt(c)+'（今すぐ支払い）・維持費 年'+feeTxt(r2(facBase()*.01))+'増<br>効果：'+FAC[k].e,'投資する',function(){
-  S.fac=S.fac||{};S.fac[k]=facLv(k)+1;S.money=r2((S.money||0)-c);S.facCost=r2((S.facCost||0)+c);renderFac();renderFin();saveGame('off');});
+  S.fac=S.fac||{};S.fac[k]=facLv(k)+1;S.money=r2((S.money||0)-c);S.facCost=r2((S.facCost||0)+c);renderFac();if(S.cands&&S.cands.length&&$('o-count'))updateCandCount();else renderFin();saveGame('off');note(FAC[k].n+'を強化しました（'+facLv(k)+'段階目）。残高 '+moneyTxt(S.money||0));});
 });
 function renderYouth(){
  var lv=S.youthLv||0,h='<p class="sub" style="margin:0">投資レベル：<b>'+YLV[lv].n+'</b>　年間 '+feeTxt(ycost())+'　（毎冬'+YLV[lv].in+'人が入団。レベルが高いほど伸び、まれに「逸材」が入る）</p>'+((S.univAlumni||[]).length?'<p class="sub" style="margin:4px 0 0;font-size:12px">大学に進んだ元ユース：'+S.univAlumni.map(function(a){return esc(a.p.name)+'（'+esc(a.u)+'・'+a.back+'年目に卒業）';}).join('、')+'</p>':'')+'<div class="scpos" style="margin-top:6px">';
