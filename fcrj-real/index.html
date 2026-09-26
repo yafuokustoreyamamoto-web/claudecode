@@ -2397,6 +2397,32 @@ function skip(){
  finish();
 }
 /* ============ カップ戦 ============ */
+var CWCT={sa:{n:'南米王者',c:['フラメンゴ（ブラジル）','パルメイラス（ブラジル）','リーベル・プレート（アルゼンチン）','ボカ・ジュニアーズ（アルゼンチン）','ボタフォゴ（ブラジル）','フルミネンセ（ブラジル）'],s:[84,88]},
+ nca:{n:'北中米カリブ王者',c:['モンテレイ（メキシコ）','クラブ・アメリカ（メキシコ）','パチューカ（メキシコ）','シアトル・サウンダーズ（アメリカ）','ロサンゼルスFC（アメリカ）'],s:[79,83]},
+ afr:{n:'アフリカ王者',c:['アル・アハリ（エジプト）','ワイダード・カサブランカ（モロッコ）','マメロディ・サンダウンズ（南アフリカ）','エスペランス（チュニジア）'],s:[78,82]},
+ oce:{n:'オセアニア王者',c:['オークランド・シティ（ニュージーランド）','ウェリントン・フェニックス（ニュージーランド）'],s:[66,70]}};
+function cwcTeam(k){var T=CWCT[k],st=T.s[0]+Math.random()*(T.s[1]-T.s[0]);return {name:pick(T.c),st:st,div:0,form:pick(FKEYS),tac:pick(TKEYS),reg:T.n};}
+function cwcEU(){var eu=(S.pool||[]).filter(function(c){return c.div>100&&c.div<=105;}).sort(function(a,b){return b.st-a.st;}).slice(0,4);var c=eu.length?pick(eu):{name:'レアル・マドリード（スペイン）',st:94};return {name:c.name,st:c.st,div:0,form:c.form||pick(FKEYS),tac:c.tac||pick(TKEYS),reg:'欧州王者'};}
+function runCWC(){
+ var me=userEnt(),ks=shuffle(['nca','afr','oce']),q1=cwcTeam(ks[0]),q2a=cwcTeam(ks[1]),q2b=cwcTeam(ks[2]),sa=cwcTeam('sa'),eu=cwcEU();
+ var log=[],st={neutral:true},res='準々決勝敗退',prize=1,won=false;
+ function line(stage,m){var a=m.h,b=m.a;return '<li><b>'+stage+'</b>　'+esc(a.name)+' '+m.gh+'-'+m.ga+' '+esc(b.name)+(m.pk?'（PK '+esc(m.win.name)+'）':'')+(a.reg||b.reg?'<small style="opacity:.7">（'+esc((a.me?b:a).reg||'')+'）</small>':'')+'</li>';}
+ var m1=cupMatch(me,q1,st);log.push(line('準々決勝',m1));
+ var m2=cupMatch(q2a,q2b,st);var w2=m2.win;
+ if(m1.win.me){res='ベスト4';prize=2.5;
+  var sfOpp=Math.random()<.5?sa:w2,other=sfOpp===sa?w2:sa;
+  var m3=cupMatch(me,sfOpp,st);log.push(line('準決勝',m3));
+  var m4=cupMatch(eu,other,st);var fin=m4.win;
+  if(m3.win.me){res='準優勝';prize=4;
+   var m5=cupMatch(me,fin,st);log.push(line('決勝',m5));
+   if(m5.win.me){res='優勝';prize=7;won=true;}
+  }
+ }
+ S.prizePending=r2((S.prizePending||0)+prize);
+ if(won){S.rep=clamp((S.rep||0)+12,0,100);S.squad.forEach(function(q){q.titles=q.titles||[];q.titles.push(S.year+'年目 FIFAクラブワールドカップ優勝');});}
+ else if(res!=='準々決勝敗退')S.rep=clamp((S.rep||0)+4,0,100);
+ return {won:won,res:res,prize:prize,log:log};
+}
 function userEnt(){return {me:true,name:S.teamName,div:S.div};}
 function entDiv(e){return e.me?S.div:(e.div||4);}
 function entSt(e){return e.me?userSt():e.st;}
@@ -3084,7 +3110,8 @@ function finalizeSeason(){
  S.lastJ1=divTable(1).map(function(r){return {n:r.name,me:!!r.me};});
  S.lastEmpW=(S.cups.emp&&S.cups.emp.champ)?(S.cups.emp.champ.me?'__ME__':S.cups.emp.champ.name):null;
  S.lastACL=aclRes;
- if(S.ic&&S.ic.won)aclRes=(aclRes?aclRes+'・':'')+'世界一';
+ S.ic=null;if(aclRes.indexOf('ACLE優勝')>-1&&S.div<=3){S.ic=runCWC();var icx=S.ic;setTimeout(function(){ask('🌍 <b>FIFAクラブワールドカップ</b>にアジア王者として出場しました。<ul class="growth" style="margin-top:8px">'+icx.log.join('')+'</ul>結果：<b>'+(icx.won?'優勝・世界一！':icx.res)+'</b>　賞金 '+feeTxt(icx.prize)+'（冬の決算で計上）','OK',null);$('cm-no').style.display='none';},700);}
+ if(S.ic&&S.ic.won)aclRes=(aclRes?aclRes+'・':'')+'世界一';else if(S.ic)aclRes=(aclRes?aclRes+'・':'')+'クラブW杯'+S.ic.res;
  var nextE=aclQualify(rank,cupT.indexOf('天皇杯優勝')>-1);
  S.aclEntry=S.div>100?null:nextE;
  S.lastACL=aclRes;
@@ -3105,7 +3132,7 @@ function finalizeSeason(){
  if(aclRes.indexOf('優勝')>-1)dl+=15;else if(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)dl+=6;
  if((S.div===1||S.div>100)&&dl>0)dl=Math.round(dl*(S.div>100?1.5:1.2));
  S.rep=clamp((S.rep==null?20:S.rep)+dl,0,100);
- S.prizePending=r2((rank===1?({1:3,2:1,3:.5}[S.div]||10):0)+cupT.length*1.5+(aclRes.indexOf('優勝')>-1?4:0));
+ S.prizePending=r2((S.prizePending||0)+(rank===1?({1:3,2:1,3:.5}[S.div]||10):0)+cupT.length*1.5+(aclRes.indexOf('優勝')>-1?4:0));
  finance('winter');
  if(aclRes.indexOf('優勝')>-1)dl+=20;else if(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)dl+=10;
  S.trust=clamp(S.trust+(aclRes.indexOf('優勝')>-1?20:(aclRes.indexOf('ベスト4')>-1||aclRes.indexOf('準優勝')>-1)?10:0),0,100);
