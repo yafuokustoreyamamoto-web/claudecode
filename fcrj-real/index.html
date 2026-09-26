@@ -705,6 +705,18 @@ var NATS=[
  {k:'ID',f:'🇮🇩',n:'インドネシア',w:4,pt:1,fn:'ワヒュ リズキー アンディカ ファジャル バグス ユダ',ln:'プラタマ サプトラ ヌグロホ ハリアント スギアルト ウィジャヤ'}];
 REAL.X.forEach(function(x){NATS.push({k:x[0],f:x[1],n:x[2],w:0,pt:x[3],fn:'',ln:''});});
 NATS.push({k:'LG',f:'🌐',n:'外国籍',w:0,fn:'',ln:''});
+NATS.push(
+ {k:'UY',f:'🇺🇾',n:'ウルグアイ',w:0,fn:'ニコラス セバスティアン ロドリゴ マキシミリアーノ アグスティン ディエゴ フェデリコ マティアス',ln:'スアレス カバーニ ロドリゲス ペレイラ ゴンサレス フェルナンデス シルバ ヌニェス',mono:''},
+ {k:'CL',f:'🇨🇱',n:'チリ',w:0,fn:'ベンハミン ビセンテ クリストバル イグナシオ ホアキン マティアス',ln:'ムニョス ロハス ディアス ソト コントレラス シルバ',mono:''},
+ {k:'US',f:'🇺🇸',n:'アメリカ',w:0,fn:'タイラー ジョーダン ブランドン ケヴィン クリスチャン ライアン マイケル ジョシュ',ln:'ジョンソン ウィリアムズ デイヴィス アダムス ロビンソン ウォーカー ターナー ヒル',mono:''},
+ {k:'MX',f:'🇲🇽',n:'メキシコ',w:0,fn:'エドソン ヒルベルト ヘスス イルビング オリベル ルイス ウリエル エリック',ln:'エルナンデス ロサノ ベガ グアルダード アルバレス ラミレス トーレス チャベス',mono:''},
+ {k:'CR',f:'🇨🇷',n:'コスタリカ',w:0,fn:'ケイラー ブライアン ホエル ジェルシー フランシスコ',ln:'ナバス ルイス カンベル ボラーニョス カルボ',mono:''},
+ {k:'GH',f:'🇬🇭',n:'ガーナ',w:0,fn:'クワメ コフィ ヤウ クワベナ アンドレ ジョーダン トーマス',ln:'アイェウ パルティ アサモア クドゥス メンサー ボアテング オウス',mono:''},
+ {k:'CM',f:'🇨🇲',n:'カメルーン',w:0,fn:'ヴァンサン アンドレ カール ブライアン ジャン マルティン',ln:'アブバカル オナナ エンベウモ エカンビ ンクル ハドジ',mono:''},
+ {k:'SN',f:'🇸🇳',n:'セネガル',w:0,fn:'イドリッサ シェイク パペ イスマイラ ブライ アブドゥ',ln:'ディアロ サール マネ クリバリ ンディアイェ シセ',mono:''},
+ {k:'CN',f:'🇨🇳',n:'中国',w:0,ko:1,fn:'ウェイ レイ ハオ ジエ ヤン ボー チェン タオ',ln:'ワン リー ジャン リウ チェン ヤン ウー チャオ',mono:''},
+ {k:'UZ',f:'🇺🇿',n:'ウズベキスタン',w:0,fn:'エルドル オタベク ジャロリディン アボスベク オディル ホジマト',ln:'ショムロドフ マシャリポフ ハムダモフ ファイズラエフ ユスポフ エルキノフ',mono:''},
+ {k:'IR',f:'🇮🇷',n:'イラン',w:0,fn:'メフディ アリレザ サマン モルテザ サイード アミール',ln:'タレミ ジャハンバフシュ ゴッドス プーラリガンジ ヌーロラヒ モハンマディ',mono:''});
 var NATMAP={};
 NATS.forEach(function(x){x.fnA=x.fn.split(' ');x.lnA=x.ln.split(' ');x.monoA=x.mono?x.mono.split(' '):[];NATMAP[x.k]=x;});
 function JT(x){return Math.round((60+(x-60)*.8)*10)/10;}
@@ -719,15 +731,15 @@ var POOLDEF='いわてグルージャ盛岡:1.6,Y.S.C.C.横浜:1.4,沖縄SV:1.3,
 var UNIVDEF='筑波大学:2.2,明治大学:2.1,流通経済大学:2.0,法政大学:1.9,順天堂大学:1.8,桐蔭横浜大学:1.9,東洋大学:1.8,国士舘大学:1.7,駒澤大学:1.7,関西学院大学:1.9';
 var HANEDADEF='HanedaFC:3.0';
 var EURO={
- S:{n:'欧州ビッグクラブ',ovr:88,age:28,fee:[6,12],div:1,
+ S:{n:'欧州ビッグクラブ',ovr:88,age:28,fee:[5,10],div:1,
   c:'マンチェスター・ユナイテッド（イングランド）,マンチェスター・シティ（イングランド）,チェルシー（イングランド）,トッテナム（イングランド）,リヴァプール（イングランド）,アーセナル（イングランド）,バイエルン・ミュンヘン（ドイツ）,ドルトムント（ドイツ）,レアル・マドリード（スペイン）,FCバルセロナ（スペイン）,パリ・サンジェルマン（フランス）,ACミラン（イタリア）,インテル（イタリア）,ユヴェントス（イタリア）'},
- A:{n:'5大リーグ',ovr:84,age:28,fee:[3,6],div:1,
+ A:{n:'5大リーグ',ovr:84,age:28,fee:[2.4,4.8],div:1,
   c:'ブライトン（イングランド）,フランクフルト（ドイツ）,SCフライブルク（ドイツ）,レアル・ソシエダ（スペイン）,ASモナコ（フランス）,SSラツィオ（イタリア）'},
- B:{n:'欧州の強豪',ovr:80,age:29,fee:[1.5,3],div:2,
+ B:{n:'欧州の強豪',ovr:80,age:29,fee:[1.2,2.4],div:2,
   c:'セルティック（スコットランド）,フェイエノールト（オランダ）,スポルティングCP（ポルトガル）,AZアルクマール（オランダ）,KRCヘンク（ベルギー）,ユニオン・サン＝ジロワーズ（ベルギー）'},
- C:{n:'欧州への入り口',ovr:76,age:23,fee:[.8,1.6],div:2,
+ C:{n:'欧州への入り口',ovr:76,age:23,fee:[.6,1.3],div:2,
   c:'シント＝トロイデン（ベルギー）,NECナイメヘン（オランダ）,ポルティモネンセ（ポルトガル）,レッドブル・ザルツブルク（オーストリア）,FCミッティラン（デンマーク）,グラスホッパー・チューリッヒ（スイス）'}};
-var ASIA={n:'アジア',fee:[.3,1],
+var ASIA={n:'アジア',fee:[.25,.8],
  c:'ブリーラム・ユナイテッド（タイ）,BGパトゥム・ユナイテッド（タイ）,ムアントン・ユナイテッド（タイ）,ジョホール・ダルル・タクジム（マレーシア）,ペルシブ・バンドン（インドネシア）,バリ・ユナイテッド（インドネシア）,ハノイFC（ベトナム）,アルビレックス新潟シンガポール（シンガポール）,カヤFCイロイロ（フィリピン）'};
 (function(){for(var k in EURO)EURO[k].cA=EURO[k].c.split(',');ASIA.cA=ASIA.c.split(',');})();
 function feeOf(range,ovr,base){
@@ -899,6 +911,11 @@ function pickNat(){
  for(i=0;i<NATS.length;i++){r-=NATS[i].w;if(r<=0)return NATS[i];}
  return NATS[0];
 }
+function foreignNameOf(k){
+ var nat=NATMAP[k]||pickNat(),n,t=0;
+ do{if(nat.monoA.length&&Math.random()<.25)n=pick(nat.monoA);else if(nat.ko)n=pick(nat.lnA)+'・'+pick(nat.fnA);else if(nat.vn)n=pick(nat.lnA)+'・'+pick(['ヴァン','ドゥック','ホアン','ミン'])+'・'+pick(nat.fnA);else n=pick(nat.fnA)+'・'+pick(nat.lnA);t++;}while(usedNames[n]&&t<80);
+ usedNames[n]=1;return {name:n,nat:nat.k};
+}
 function foreignName(){
  var nat=pickNat(),n,t=0;
  do{
@@ -962,7 +979,7 @@ var REALEU={"L":{"GB1":"プレミアリーグ","ES1":"ラ・リーガ","L1":"ブ
 var LGC=['GB1','ES1','L1','IT1','FR1','NL1','BE1','PO1','SC1'];
 REALEU.NX.forEach(function(x){if(!NATMAP[x[0]]){var o={k:x[0],f:x[1],n:x[2],w:0,fn:'',ln:'',fnA:[''],lnA:[''],monoA:[]};NATS.push(o);NATMAP[x[0]]=o;}});
 var LGX={GB1:{sp:120,att:40000,price:6000,dist:30,pay:2.5},ES1:{sp:80,att:35000,price:5000,dist:20,pay:2},L1:{sp:80,att:42000,price:4500,dist:18,pay:2},IT1:{sp:70,att:30000,price:4500,dist:18,pay:1.8},FR1:{sp:60,att:28000,price:4000,dist:15,pay:1.6},NL1:{sp:25,att:20000,price:3500,dist:6,pay:1.2},BE1:{sp:18,att:14000,price:3000,dist:4,pay:1.1},PO1:{sp:20,att:15000,price:3000,dist:5,pay:1.1},SC1:{sp:12,att:12000,price:3000,dist:3,pay:1}};
-function lgx(d){if(d>100)return LGX[LGC[d-101]];return {sp:{1:24,2:8,3:3}[d]||3,att:{1:18000,2:7000,3:3000}[d]||3000,price:3000,dist:{1:3.5,2:1.5,3:.3}[d]||.3,pay:{1:1,2:.7,3:.5}[d]||1};}
+function lgx(d){if(d>100)return LGX[LGC[d-101]];return {sp:{1:24,2:8,3:3}[d]||3,att:{1:18000,2:7000,3:3000}[d]||3000,price:3000,dist:{1:3.5,2:1.5,3:.3}[d]||.3,pay:{1:1,2:.8,3:.6}[d]||1};}
 function addEU(){
  REALEU.C.forEach(function(c,i){
   var x=newClub({name:c[0],star:(c[2]-59)/6},101+LGC.indexOf(c[1]));
@@ -1300,12 +1317,12 @@ function mgrMul(lu){var m=S.mgr;if(!m)return 1+teamLead()*.025;var v=1+teamLead(
  (lu||[]).forEach(function(o){if(o.p&&o.sp!=='GK'){n++;if(fitOf(o.p)===2)f++;}});if(n)v+=f/n*.02;return v;}
 var FPREM=1.8,FSAL=1.5;
 function isImport(nat){var n=nat?NATMAP[nat]:null;return !!(nat&&nat!=='JP'&&!(n&&n.pt));}
-function salOf(p){if(p.age<=18)return .01;var x=Math.max(0,p.ovr-55);return Math.max(.03,r2(.0008*Math.pow(x,2.15)*(p.foreign&&isImport(p.nat)?FSAL:1)));}
+function salOf(p){if(p.age<=18)return .01;var b=baseT(p),s=.096*Math.pow(2,(Math.min(b,75)-60)/5)*Math.pow(1.5,(Math.max(b,75)-75)/5)*(b>85?Math.pow(1.6,(b-85)/5):1);if(p.age<=21)s*=.6;else if(p.age>=34)s*=.8;if(p.foreign&&isImport(p.nat))s*=1.3;return clamp(r2(s),.02,15);}
 function divPay(d){return lgx(d||S.div).pay;}
 function payroll(){return r2(S.squad.reduce(function(s,p){return s+salOf(p)*(p.salF||1);},0)*divPay());}
-function payF(sc){return clamp(Math.pow(sc||1,.7),.35,2.2);}
+function payF(sc){return clamp(Math.pow(sc||1,.3),.75,1.25);}
 function expRev(){var X=lgx(S.div),sc=S.scale||1;return X.sp*sc+Math.sqrt(sc)*X.att*X.price*Math.round((S.rounds||38)/4)*2/1e8+X.dist;}
-function calibFin(){S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1);});S.rep0=S.rep||0;S.spA=null;var R=expRev();S.oxR=clamp((R*1.03-payroll()-(S.mgr?mgrSal(S.mgr):0)-ycost())/R,.05,.45);}
+function calibFin(){S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1);});S.rep0=S.rep||0;S.spA=null;var R=expRev();S.oxR=clamp((R*1.03-payroll()-(S.mgr?mgrSal(S.mgr):0)-ycost())/R,.05,.8);}
 function opex(){if(S.oxR!=null)return r2(expRev()*S.oxR);return r2((S.div>100?lgx(S.div).sp*1.2:revOf(S.teamName,S.div))*.3);}
 function feeOfP(p){if(p.fee!=null)return p.fee;if(p.prospect)return 0;return r2(Math.max(0,.00035*Math.pow(Math.max(0,p.ovr-58),2.3)));}
 function homeGames(from,to){return (S.log||[]).filter(function(x){return x.t==='m'&&x.h&&x.r>from&&x.r<=to;}).length;}
@@ -1704,6 +1721,7 @@ var S={squad:[],phase:1,passes:PASSES,cur:null,form:'4-4-2',tac:'poss',pol:'bal'
  year:1,div:3,pool:[],stock:[],history:[],archive:[],log:[],cands:[],picked:[],releasing:[],
  round:0,rounds:40,pts:0,w:0,d:0,l:0,gf:0,ga:0,fixtures:[],rivals:[],timer:null,ts:null,sg:'base'};
 function show(id){
+ if(id==='s-season'&&document.getElementById('btn-skip'))document.getElementById('btn-skip').textContent=S.summerDone?'シーズンの最後まで飛ばす':'前半戦の終わり（夏の移籍期間）まで飛ばす';
  var a=document.querySelectorAll('.screen'),i;
  for(i=0;i<a.length;i++)a[i].classList.remove('on');
  $(id).classList.add('on');window.scrollTo(0,0);
@@ -3526,7 +3544,7 @@ function genOffers(){
   cl=cl.slice().sort(function(a,b){return b.st-a.st;}).slice(0,S.div>1?20:8);
   var club=pick(cl);
   offers.push({p:tg,club:club.name,fromDiv:fd,area:'jp',tier:'JP',
-   fee:feeOf([.5,3],tg.ovr,70),state:'open'});
+   fee:feeOf([.4,2.4],tg.ovr,70),state:'open'});
  }
  // 欧州
  var euN=champ?(streak>=2?3:2):2;
@@ -3551,7 +3569,7 @@ function genOffers(){
  var meC=(ACLD.west.SA.c+','+ACLD.west.AE.c+','+ACLD.west.QA.c).split(',');
  var sm=S.window==='summer',me=(S.div<=2||S.div>100)?S.squad.filter(function(p){if(used[p.id]||p.age>33)return false;var st=sm?p.s:p.ls;if(!st)return false;var k=sm?.5:1;return st.g>=12*k||st.a>=10*k||(p.pos==='GK'&&st.cs>=12*k)||(!sm&&(p.titles||[]).some(function(t){return t.indexOf(S.year-1+'年目')===0;}));}).sort(function(a,b){return b.ovr-a.ovr;}):[];
  if(me.length&&Math.random()<.2){var m0=me[0];used[m0.id]=1;
-  offers.push({p:m0,club:pick(meC),fromDiv:0,area:'me',tier:'ME',fee:r2(feeOf([.5,3],m0.ovr,70)*(4+Math.random()*4)*(S.div>100?4:1)),state:'open'});}
+  offers.push({p:m0,club:pick(meC),fromDiv:0,area:'me',tier:'ME',fee:r2(feeOf([.4,2.4],m0.ovr,70)*(4+Math.random()*4)*(S.div>100?4:1)),state:'open'});}
  // アジア
  var as=S.squad.filter(function(p){return !used[p.id]&&p.age>=25&&p.age<=33&&p.ovr>=62;});
  as.sort(function(a,b){return (S.slots.indexOf(a.id)>-1?1:0)-(S.slots.indexOf(b.id)>-1?1:0);});
@@ -3827,25 +3845,38 @@ function genCands0(){
  saveGame('off');
 }
 var POSL=['GK','CB','SB','DM','CM','OM','WG','CF'];
-var REGJ={all:'すべて',j:'Jリーグ',big5:'欧州5大リーグ',euo:'欧州その他（蘭・白・葡・蘇）',jpab:'海外組の日本人'};
+var REGJ={all:'すべて',j:'Jリーグ',big5:'欧州5大リーグ',euo:'欧州その他（蘭・白・葡・蘇）',jpab:'海外組の日本人',sam:'南米（ブラジル・アルゼンチンほか）',asia:'アジア・オセアニア',afr:'アフリカ',nca:'北中米',eeu:'東欧（セルビア・クロアチア）'};
+var FICREG={sam:{n:['BR','BR','BR','AR','AR','CO','UY','CL'],m:69,sd:6,fm:1.1},asia:{n:['KR','KR','AU','AU','TH','VN','ID','CN','UZ','IR'],m:62,sd:6,fm:.6},afr:{n:['NG','GH','CM','SN'],m:64,sd:7,fm:.7},nca:{n:['US','US','MX','MX','CR'],m:64,sd:6,fm:.8},eeu:{n:['RS','RS','HR','HR'],m:67,sd:6,fm:.9}};
+function ficPlayer(reg,pos,maxAge){
+ var R=FICREG[reg],nk=pick(R.n),p=makePlayer0(0,pos||'');delete usedNames[p.name];
+ var fn=foreignNameOf(nk);p.name=fn.name;p.nat=nk;p.foreign=true;
+ p.age=18+rnd(14);if(maxAge&&p.age>maxAge)p.age=Math.max(18,maxAge-rnd(4));
+ var t=R.m+gauss()*R.sd+(p.age<=21?-4:p.age>=31?-2:0);realStats(p,clamp(t,48,88),0);
+ p.pot=Math.max(p.ovr,p.ovr+(p.age<=21?5+rnd(9):p.age<=24?2+rnd(5):0));
+ p.fic=reg;p.rclub=NATMAP[nk].n+'1部のクラブ';p.route=p.rclub+'から獲得';
+ var b=baseT(p);p.fee=r2(Math.max(.05,.0006*Math.pow(Math.max(0,b-52),2.3)*R.fm*(isImport(nk)?FPREM:1)));
+ return p;
+}
 function scoutDefault(){return {fee:Math.max(0,availMoney()),reg:S.div>100?'big5':'j',pos:[],style:'mgr',age:0};}
 function scoutRules(){var rep=S.rep||0,d=S.div;
- return {eu:d>100||d===1||(d===2&&rep>=60),big5:d>100||(d===1&&rep>=50),jpab:d>100||d<=2||rep>=40};}
+ return {eu:d>100||d===1||(d===2&&rep>=60),big5:d>100||(d===1&&rep>=50),jpab:d>100||d===1||(d===2&&rep>=50)};}
 function scoutPool(q){
- var out=[],own={},i;S.realUsed=S.realUsed||{};var R=scoutRules();
+ var out=[],own={},i;
+ (function(){var regs=FICREG[q.reg]?[q.reg]:q.reg==='all'?Object.keys(FICREG):[];regs.forEach(function(rg){for(var k=0;k<(q.reg==='all'?12:60);k++){var ps=q.pos.length?pick(q.pos):'';var fp=ficPlayer(rg,ps,q.age||0);if(fp.fee>q.fee){delete usedNames[fp.name];continue;}out.push({k:'fic',p:fp,g:baseT(fp),fee:fp.fee});}});})();S.realUsed=S.realUsed||{};var R=scoutRules();
  S.squad.concat(S.cands||[]).forEach(function(p){own[p.name]=1;});
  var okPos=function(p){return !q.pos.length||q.pos.indexOf(p)>-1;},okAge=function(a){return !q.age||a<=q.age;};
  if(q.reg==='all'||q.reg==='j'){var P=REAL.P;for(i=0;i<P.length;i++){var r=P[i];if(S.realUsed[i]||own[r[0]]||!okPos(r[3])||!okAge(r[2]))continue;if(jLv(r[1])>myLv()&&Math.random()>.15)continue;
   var fe=r[11]>0?r[11]:r2(Math.max(0,.00035*Math.pow(Math.max(0,r[6]+6-58),2.3)));if(r[8]&&isImport(r[8]))fe=r2(fe*FPREM);if(fe>q.fee)continue;out.push({k:'j',i:i,g:r[6],fee:fe});}}
- if(q.reg!=='j'&&q.reg!=='jpab'||q.reg==='all'){S.euUsed=S.euUsed||{};REALEU.P.forEach(function(r,i){if(S.euUsed[i]||own[r[0]]||!okPos(r[3])||!okAge(r[2]))return;
+ if(['all','big5','euo'].indexOf(q.reg)>-1){S.euUsed=S.euUsed||{};REALEU.P.forEach(function(r,i){if(S.euUsed[i]||own[r[0]]||!okPos(r[3])||!okAge(r[2]))return;
   var lg=REALEU.C[r[1]][1],big=['GB1','ES1','L1','IT1','FR1'].indexOf(lg)>-1;
   if(!R.eu||(big&&!R.big5))return;if((big?5:4)>myLv()&&Math.random()>.15)return;
   if(q.reg==='big5'&&!big)return;if(q.reg==='euo'&&big)return;var fe2=r[6]!=='JP'?r2(r[7]*FPREM):r[7];if(fe2>q.fee)return;out.push({k:'eu',i:i,g:r[5],fee:fe2});});}
  if((q.reg==='all'||q.reg==='jpab')&&R.jpab){S.osUsed=S.osUsed||{};REALOS.JP.forEach(function(r,i){if(S.osUsed['jp'+i]||own[r[0]]||!okPos(r[1])||!okAge(r[3]))return;
-  var fe=r2(.3+r[5]*2.5);if(fe>q.fee)return;out.push({k:'os',i:i,g:Math.round(72+r[5]*18),fee:fe});});}
+  var fe=r2(Math.max(.8,.0008*Math.pow(Math.max(0,72+r[5]*18-60),3)));if(fe>q.fee)return;out.push({k:'os',i:i,g:Math.round(72+r[5]*18),fee:fe});});}
  return out;
 }
 function scoutBuild(o){
+ if(o.k==='fic')return o.p;
  var p=makePlayer0(0);delete usedNames[p.name];
  if(o.k==='j'){var r=REAL.P[o.i];p.name=r[0];p.real=o.i;p.rclub=rclubName(r[1]);p.age=r[2];p.pos=r[3];p.pos2=r[4];p.pos3=r[4]?r[5]:'';p.foreign=!!r[8];p.nat=r[8]||'';realStats(p,r[6],r[9]);p.pot=Math.max(p.ovr,p.ovr+(r[7]-r[6]));p.route=p.rclub+'から獲得';}
  else if(o.k==='eu'){var e=REALEU.P[o.i];p.name=e[0];p.eu=o.i;p.rclub=REALEU.C[e[1]][0];p.age=e[2];p.pos=e[3];p.pos2=e[4];p.pos3='';p.foreign=e[6]!=='JP';p.nat=e[6]==='JP'?'':(NATMAP[e[6]]?e[6]:'LG');realStats(p,e[5],0);p.pot=p.ovr+(p.age<=21?4:p.age<=23?2:0);p.route=p.rclub+'から獲得';}
@@ -3874,7 +3905,7 @@ function scoutRun(q){
 function scoutHTML(){
  var q=S.scoutQ||scoutDefault(),left=S.scoutLeft==null?3:S.scoutLeft;
  var h='<div class="scoutbox"><b>獲得方針</b><p class="sub" style="margin:2px 0 8px;font-size:12px">'+(left>0?'条件に合う実在選手をリストアップします。'+(left===3?'<b>やり直しは2回まで</b>です。':'やり直しはあと<b>'+left+'回</b>です。'):'この移籍期間の獲得方針は決定済みです（やり直しの回数を使い切りました）。')+'使える予算 <b class="avail">'+moneyTxt(availMoney())+'</b>'+(pickedList().length?'（獲得予定の移籍金を差し引き済み）':'')+'</p>';
- var R=scoutRules(),lim=[];if(!R.big5)lim.push('欧州5大リーグの選手はJ1で監督評価50以上から交渉できます');if(!R.eu)lim.push('欧州その他の選手はJ1、またはJ2で監督評価60以上から');if(!R.jpab)lim.push('海外組の日本人はJ2以上、または監督評価40以上から');
+ var R=scoutRules(),lim=[];if(!R.big5)lim.push('欧州5大リーグの選手はJ1で監督評価50以上から交渉できます');if(!R.eu)lim.push('欧州その他の選手はJ1、またはJ2で監督評価60以上から');if(!R.jpab)lim.push('海外組の日本人はJ1、またはJ2で監督評価50以上から');
  if(lim.length)h+='<p class="sub" style="margin:0 0 6px;font-size:11px">'+lim.join('。')+'。</p>';
  h+='<label>移籍金の上限（億円）<input type="number" id="sc-fee" min="0" step="0.1" value="'+Math.min(q.fee,Math.max(0,availMoney()))+'"></label>';
  h+='<label>地域<select id="sc-reg">';for(var k in REGJ)h+='<option value="'+k+'"'+(q.reg===k?' selected':'')+'>'+REGJ[k]+'</option>';h+='</select></label>';
@@ -3896,6 +3927,7 @@ function lvOfPlayer(p){
  if(p.youth||p.prospect)return 0;
  if(p.eu!=null){var lg=REALEU.C[REALEU.P[p.eu][1]][1];return ['GB1','ES1','L1','IT1','FR1'].indexOf(lg)>-1?5:4;}
  if(p.os!=null||p.legend==='海外帰り')return 3.5;
+ if(p.fic)return p.fic==='sam'?3:p.fic==='eeu'?2.5:2;
  if(p.legend==='欧州から')return 4.5;
  if(p.real!=null){var ci=REAL.P[p.real][1];return ci<20?3:ci<40?2:1;}
  return 0;
@@ -3903,6 +3935,7 @@ function lvOfPlayer(p){
 function myLv(){return S.div>100?(['GB1','ES1','L1','IT1','FR1'].indexOf(LGC[S.div-101])>-1?5:4):({1:3,2:2,3:1}[S.div]||1);}
 function accP(p){
  if(p.released)return .95;
+ if(p.os!=null){return clamp(.1+(p.age>=31?.4:p.age>=28?.15:0)+(S.div===1?.08:S.div>100?.2:-.06)+((S.rep||0)-40)/250-(p.ovr>=85?.08:0),.03,.8);}
  var lp=lvOfPlayer(p);if(!lp)return .97;
  var gap=lp-myLv(),v=.72-.2*Math.max(0,gap)+.06*Math.max(0,-gap);
  var same=S.squad.filter(function(q){return q.pos===p.pos;}).map(function(q){return q.ovr;}).sort(function(a,b){return b-a;});
