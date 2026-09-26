@@ -3683,6 +3683,7 @@ function genOffers(){
    fee:feeOf([.1,.5],v0.ovr,65),state:'open'});
  }
  offers=offers.filter(function(o){return !o.p.loanIn;});
+ offers=offers.filter(function(o){if(!o.p.orig)return true;return o.area==='eu'||o.area==='me'||o.area==='asia'||(o.area==='out'&&ASIA.cA.indexOf(o.club)>-1);});
  var auto=[];offers=offers.filter(function(o){if(o.area!=='loan'&&o.p.boughtFee>0&&(o.fee||0)<=o.p.boughtFee){auto.push(o);return false;}return true;});
  if(auto.length)S.offGrowth=(S.offGrowth||'')+'<li>🛡️ 獲得時の移籍金を上回らないため自動で断ったオファー：'+auto.map(function(o){return esc(o.p.name)+'（'+esc(o.club)+'・'+feeTxt(o.fee||0)+'／獲得時 '+feeTxt(o.p.boughtFee)+'）';}).join('、')+'</li>';
  for(i=0;i<offers.length;i++)offers[i].lv=offers[i].area==='me'?'lo':stayLevel(offers[i].p,offers[i]);
