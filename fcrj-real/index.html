@@ -1421,7 +1421,7 @@ function loanBuy(id){
  if(f>(S.money||0)){note('買取額 '+feeTxt(f)+' に対して残高が足りません（残高 '+moneyTxt(S.money||0)+'）。');return;}
  ask(esc(p.name)+'を買取オプション '+feeTxt(f)+' で完全移籍させますか？','買い取る',function(){
   S.money=r2((S.money||0)-f);S.buyCost=r2((S.buyCost||0)+f);
-  p.route=p.loanIn.club+'からレンタル→買取で完全移籍';p.loanIn=null;
+  p.route=p.loanIn.club+'からレンタル→買取で完全移籍';p.boughtFee=r2((p.loanIn.buy!=null?p.loanIn.buy:0)+loanFee(p));p.loanIn=null;
   var hi=S.holes.indexOf(p.pos);if(hi>-1)S.holes.splice(hi,1);
   renderOffSquad();renderFin();if(S.cands&&S.cands.length)renderCands();saveGame('off');
  });
@@ -3608,6 +3608,8 @@ function genOffers(){
    fee:feeOf([.1,.5],v0.ovr,65),state:'open'});
  }
  offers=offers.filter(function(o){return !o.p.loanIn;});
+ var auto=[];offers=offers.filter(function(o){if(o.area!=='loan'&&o.p.boughtFee>0&&(o.fee||0)<=o.p.boughtFee){auto.push(o);return false;}return true;});
+ if(auto.length)S.offGrowth=(S.offGrowth||'')+'<li>🛡️ 獲得時の移籍金を上回らないため自動で断ったオファー：'+auto.map(function(o){return esc(o.p.name)+'（'+esc(o.club)+'・'+feeTxt(o.fee||0)+'／獲得時 '+feeTxt(o.p.boughtFee)+'）';}).join('、')+'</li>';
  for(i=0;i<offers.length;i++)offers[i].lv=offers[i].area==='me'?'lo':stayLevel(offers[i].p,offers[i]);
  return offers;
 }
@@ -4108,7 +4110,7 @@ function startNextSeason(){
  S.squad.filter(function(p){return p.loanIn&&p.loanIn.expired;}).forEach(loanReturn);
  if(S.natCoach&&S.natPending){natConfirm((S.natSel&&S.natSel.length===NATN)?S.natSel.slice():natAuto());}
  var summer=S.window==='summer',cost=r2(S.picked.reduce(function(s,k){return s+pickTotal(S.cands[k]);},0));
- var salp=r2(S.picked.reduce(function(s,k){return s+pickSal(S.cands[k]);},0));S.picked.forEach(function(k){if(S.cands[k])S.cands[k].prepaid=S.year;});
+ var salp=r2(S.picked.reduce(function(s,k){return s+pickSal(S.cands[k]);},0));S.picked.forEach(function(k){var c=S.cands[k];if(c){c.prepaid=S.year;if(!c.loanIn)c.boughtFee=pickFee(c);}});
  S.money=r2((S.money||0)-cost);S.buyCost=r2((S.buyCost||0)+cost-salp);S.salPre=r2((S.salPre||0)+salp);
  startNextSeason0();
  if(S.oxR!=null)S.squad.forEach(function(p){if(p.salF==null)p.salF=payF(S.scale||1)*(p.age<=18?1:1.15);});
