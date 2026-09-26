@@ -1797,7 +1797,7 @@ function newClub0(d,div){
   ace:uniqueName(),ace2:uniqueName(),aceG:0,ace2G:0,pm:uniqueName(),gk:uniqueName(),pmA:0,
   form:pick(FKEYS),tac:pick(TKEYS),pts:0,gf:0,ga:0,jit:0};
 }
-function buildPool(){worldReset();S.w=null;S.wRet=[];S.mgrRet={};buildPool0();addEU();}
+function buildPool(){S.mv=1;worldReset();S.w=null;S.wRet=[];S.mgrRet={};buildPool0();addEU();}
 function buildPool0(){
  S.pool=[];
  for(var d=1;d<=3;d++){var L=parseDef(LEAGUE[d]);for(var i=0;i<L.length;i++)S.pool.push(newClub(L[i],d));}
@@ -4495,11 +4495,27 @@ function readSave(txt){
   return d;
  }catch(e){return null;}
 }
+function migrateSave(){
+ var v=S.mv||0,msg=[];
+ if(v<1){
+  var js=(S.pool||[]).filter(function(c){return c.div>=1&&c.div<=3;}),mx=0;js.forEach(function(c){mx=Math.max(mx,c.core||c.st||0);});
+  if(mx>84){
+   var cl=(S.pool||[]).filter(function(c){return !(c.div>100);}).concat(S.stock||[],S.univs||[],S.haneda?[S.haneda]:[],S.acl||[]);
+   cl.forEach(function(c){if(c.core!=null)c.core=JT(c.core);if(c.st!=null)c.st=JT(c.st);});
+   var ps=(S.squad||[]).concat(S.youth||[],S.cands||[],(S.loans||[]).map(function(L){return L.p;}));
+   ps.forEach(function(p){if(!p||!p.st||p.eu!=null||p.os!=null)return;for(var k in p.st)p.st[k]=clamp(Math.round(JT(p.st[k])),22,99);p.mod=Math.round((p.mod||0)*.8);if(p.pot)p.pot=Math.round(JT(p.pot));p.ovr=ovrFor(p,p.pos);});
+   msg.push('評価スケールを新しい基準（Jリーグと欧州の差を拡大）に合わせました');
+  }
+  if(S.realStart&&S.oxR!=null&&S.squad&&S.squad.length){calibFin();msg.push('年俸体系と財政の計画を新しい方式で計算し直しました');}
+ }
+ S.mv=1;return msg;
+}
 function applySave(d){
  uid=d.uid||uid;usedNames=d.names||{};
  var o=d.S,k;
  for(k in o)if(k!=='cups'&&k!=='poAll')S[k]=o[k];
  worldApply(S.w);
+ var mgm=migrateSave();if(mgm.length){try{S.mvSaveTo=d.ph;}catch(e){}setTimeout(function(){saveGame(d.ph);},0);}if(mgm.length)setTimeout(function(){ask('セーブデータを最新の仕様に合わせました。<br>・'+mgm.join('<br>・'),'OK',null);$('cm-no').style.display='none';},400);
  S.timer=null;PASSES=DF().pass;
  S.cups=unpackCups(o.cups);S.poAll=unpackPO(o.poAll);
  (S.pool||[]).concat(S.stock||[],S.univs||[],S.haneda?[S.haneda]:[]).forEach(function(c){if(!c.pm)c.pm=uniqueName();if(!c.gk)c.gk=uniqueName();});
