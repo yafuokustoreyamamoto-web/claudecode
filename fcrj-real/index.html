@@ -1809,7 +1809,7 @@ function newClub0(d,div){
   ace:uniqueName(),ace2:uniqueName(),aceG:0,ace2G:0,pm:uniqueName(),gk:uniqueName(),pmA:0,
   form:pick(FKEYS),tac:pick(TKEYS),pts:0,gf:0,ga:0,jit:0};
 }
-function buildPool(){S.mv=1;worldReset();S.w=null;S.wRet=[];S.mgrRet={};buildPool0();addEU();}
+function buildPool(){S.mv=1;S.mv2=1;worldReset();S.w=null;S.wRet=[];S.mgrRet={};buildPool0();addEU();}
 function buildPool0(){
  S.pool=[];
  for(var d=1;d<=3;d++){var L=parseDef(LEAGUE[d]);for(var i=0;i<L.length;i++)S.pool.push(newClub(L[i],d));}
@@ -4540,6 +4540,14 @@ function migrateSave(){
  (S.youth||[]).concat(S.squad||[],S.cands||[]).forEach(function(p){if(p&&p.reinOf&&p.name!==p.reinOf){p.name=p.reinOf;if(/生まれ変わり/.test(p.route||''))p.route='ユース（転生）';if(/生まれ変わり/.test(p.rclub||''))p.rclub=p.rclub.replace(/（[^）]*の生まれ変わり）/,'（転生）');}});
  (S.youth||[]).concat(S.squad||[]).forEach(function(p){if(p&&p.reinOf&&p.age<=19&&p.pot&&p.ovr<p.pot-17){p.mod+=(p.pot-14)-p.ovr;p.ovr=ovrFor(p,p.pos);}});
  (REAL.P||[]).forEach(function(r){if(r[12]==='R'&&r[2]<=19&&r[6]<r[7]-14)r[6]=r[7]-12;});(REALEU.P||[]).forEach(function(r){if(r[9]==='R'&&r[2]<=19&&r[11]&&r[5]<r[11]-16)r[5]=r[11]-14;});
+
+ if((S.mv2||0)<1){var up=0;
+  var exp=function(pot,age){return Math.min(pot,pot-12+Math.max(0,age-16)*3);};
+  (S.youth||[]).concat(S.squad||[],(S.loans||[]).map(function(L){return L.p;})).forEach(function(p){if(!p||!p.reinOf||!p.pot||p.age>23)return;var t=exp(p.pot,p.age);if(p.ovr<t){p.mod+=t-p.ovr;p.ovr=ovrFor(p,p.pos);up++;}});
+  (REAL.P||[]).forEach(function(r){if(r[12]==='R'&&r[2]<=23){var t=exp(r[7],r[2]);if(r[6]<t){r[6]=t;up++;}}});
+  (REALEU.P||[]).forEach(function(r){if(r[9]==='R'&&r[2]<=23&&r[11]){var t=exp(r[11],r[2]);if(r[5]<t){r[5]=t;up++;}}});
+  if(up){S.w=packWorld();msg.push('転生した選手'+up+'人の能力を新しい水準（早熟型）に引き上げました');}
+  S.mv2=1;}
  S.mv=1;return msg;
 }
 function applySave(d){
