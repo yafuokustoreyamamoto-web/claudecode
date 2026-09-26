@@ -410,6 +410,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
     <button class="btn cta" id="btn-continue">つづきから</button>
     <p class="sub" id="t-contsub" style="margin:8px 0 0"></p>
   </div>
+  <p class="sub" id="t-cloud" style="margin:6px 0 0;font-size:12px"></p>
   <div class="diffsel" id="diffsel" role="group" aria-label="難易度">
     <button type="button" data-d="n" class="on" aria-pressed="true">ノーマル</button><button type="button" data-d="h" aria-pressed="false">ハード</button><button type="button" data-d="l" aria-pressed="false">レジェンド</button>
   </div>
@@ -1555,7 +1556,7 @@ function preseason(c){
  genCands();renderOffFromState();saveGame('off');
 }
 function startClub(name){
- try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+ clearSave();
  S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};S.euUsed={};buildPool();S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);
  var c=null;S.pool.forEach(function(x){if(x.name===name)c=x;});if(!c)return;
  S.pool.splice(S.pool.indexOf(c),1);
@@ -1580,7 +1581,7 @@ document.addEventListener('click',function(e){
  var tb=t.closest('[data-cltab]');if(tb){renderClubSel(+tb.getAttribute('data-cltab'));return;}
  var cb=t.closest('[data-club]');if(cb){var nm=cb.getAttribute('data-club');ask(esc(nm)+'のGMとして始めますか？'+(readSave()?'<br>今のセーブデータは消えます。':''),'このクラブで始める',function(){startClub(nm);});return;}
  if(t.closest('#btn-clback')){show('s-title');}
- if(t.closest('#btn-draftmode')){var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(er){}S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+ if(t.closest('#btn-draftmode')){var go=function(){clearSave();S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
   if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
 });
 var SQN=99,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
@@ -4343,17 +4344,57 @@ function unpackPO(o){
  }
  return out;
 }
+var CLOUD={db:null,uid:null,raw:null,sent:[],timer:null,busy:false,again:false,ok:false};
+var CHUNK=60000;
+function lsGet(){try{return localStorage.getItem(SAVE_KEY);}catch(e){return null;}}
+function cdoc(k){return CLOUD.db.doc('data/users/'+CLOUD.uid+'/'+k);}
+function cloudQueue(now){if(!CLOUD.db)return;if(CLOUD.timer)clearTimeout(CLOUD.timer);CLOUD.timer=setTimeout(cloudFlush,now?0:2500);}
+function cloudFlush(){
+ CLOUD.timer=null;if(!CLOUD.db||!CLOUD.raw)return;if(CLOUD.busy){CLOUD.again=true;return;}
+ var raw=CLOUD.raw,at=0;try{at=JSON.parse(raw).at||Date.now();}catch(e){at=Date.now();}
+ var parts=[];for(var i=0;i<raw.length;i+=CHUNK)parts.push(raw.slice(i,i+CHUNK));
+ CLOUD.busy=true;var k=0;
+ function next(){
+  if(k>=parts.length)return cdoc('save_meta').set({at:at,n:parts.length,v:SAVE_VER}).then(function(){CLOUD.ok=true;});
+  var j=k++;if(CLOUD.sent[j]===parts[j])return next();
+  return cdoc('save_'+j).set({d:parts[j]}).then(function(){CLOUD.sent[j]=parts[j];return next();});
+ }
+ next().catch(function(){}).then(function(){CLOUD.busy=false;if(CLOUD.again){CLOUD.again=false;cloudFlush();}});
+}
+function cloudClear(){CLOUD.raw=null;CLOUD.sent=[];if(!CLOUD.db)return;if(CLOUD.timer){clearTimeout(CLOUD.timer);CLOUD.timer=null;}cdoc('save_meta').set({at:Date.now(),n:0,v:SAVE_VER}).catch(function(){});}
+function clearSave(){try{localStorage.removeItem(SAVE_KEY)}catch(e){}cloudClear();}
+function cloudInit(){
+ if(!window.claude||!window.claude.use)return;
+ Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
+  var db=r[0],us=r[1];if(!db||!us)return null;
+  return us.id().then(function(id){if(!id)return null;CLOUD.db=db;CLOUD.uid=id;return cdoc('save_meta').get();});
+ }).then(function(ms){
+  if(!ms||!ms.exists)return;var m=ms.data()||{};if(!m.n||m.v!==SAVE_VER)return;
+  var loc=readSave(),lat=loc?loc.at||0:0;if(lat>=m.at)return;
+  var ps=[];for(var i=0;i<m.n;i++)ps.push(cdoc('save_'+i).get());
+  return Promise.all(ps).then(function(ds){
+   var parts=ds.map(function(d){return d.exists?(d.data()||{}).d||'':null;});if(parts.some(function(x){return x==null;}))return;
+   var raw=parts.join(''),d=readSave(raw);if(!d||d.at!==m.at)return;
+   CLOUD.raw=raw;CLOUD.sent=parts;try{localStorage.setItem(SAVE_KEY,raw);}catch(e){}
+   var tt=document.getElementById('s-title');if(tt&&tt.classList.contains('on'))initTitle();
+  });
+ }).catch(function(){}).then(function(){if(CLOUD.db){var el=document.getElementById('t-cloud');if(el)el.textContent='☁ このページではクラウドにも自動保存されます（スマホなど別の端末でも、同じアカウントならつづきから遊べます）';}});
+ document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&CLOUD.timer)cloudQueue(true);});
+ window.addEventListener('pagehide',function(){if(CLOUD.timer)cloudQueue(true);});
+}
 function saveGame(ph){
  try{
   var o={};
   for(var k in S)if(!SKIP[k])o[k]=S[k];
   o.cups=packCups();o.poAll=packPO();
-  localStorage.setItem(SAVE_KEY,JSON.stringify({v:SAVE_VER,ver:VERSION,ph:ph,uid:uid,names:usedNames,at:Date.now(),S:o}));
+  var raw=JSON.stringify({v:SAVE_VER,ver:VERSION,ph:ph,uid:uid,names:usedNames,at:Date.now(),S:o});
+  CLOUD.raw=raw;try{localStorage.setItem(SAVE_KEY,raw);}catch(e){}
+  cloudQueue();
  }catch(e){}
 }
 function readSave(txt){
  try{
-  var raw=txt||localStorage.getItem(SAVE_KEY);if(!raw)return null;
+  var raw=txt||lsGet()||CLOUD.raw;if(!raw)return null;
   var d=JSON.parse(raw);
   if(!d||d.v!==SAVE_VER||!d.S||!d.ph)return null;
   return d;
@@ -4415,7 +4456,7 @@ function shareFile(blob,name,text){
  return false;
 }
 function exportSave(){
- var raw=localStorage.getItem(SAVE_KEY);
+ var raw=lsGet()||CLOUD.raw;
  if(!raw){note('セーブデータがありません。');return;}
  gc('export');
  shareFile(new Blob([raw],{type:'application/json'}),'fcrj-save-'+(S.year||1)+'nenme.json');
@@ -4425,7 +4466,7 @@ function importSave(file){
  r.onload=function(){
   var d=readSave(String(r.result));
   if(!d){note('セーブデータとして読み込めませんでした。');return;}
-  var go=function(){try{localStorage.setItem(SAVE_KEY,String(r.result));}catch(e){}restoreGame(d);};
+  var go=function(){CLOUD.raw=String(r.result);try{localStorage.setItem(SAVE_KEY,CLOUD.raw);}catch(e){}cloudQueue();restoreGame(d);};
   if(readSave())ask('今のセーブデータを上書きして読み込みますか？','読み込む',go,true);else go();
  };
  r.readAsText(file);
@@ -4447,7 +4488,7 @@ function resign(){
  CMNO=resume;
 }
 function showBye(kind){
- try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+ clearSave();
  var H=S.history||[],yrs=H.length,j1=0,t=[],best=null,i;
  for(i=0;i<H.length;i++){
   var e=H[i];
@@ -4483,7 +4524,7 @@ var DDESC={n:'原作どおりのバランス。見送り10回。',h:'見送り6�
 (function(){var bs=document.querySelectorAll('#diffsel button');for(var i=0;i<bs.length;i++)bs[i].addEventListener('click',function(){SELDIFF=this.getAttribute('data-d');for(var j=0;j<bs.length;j++){bs[j].classList.toggle('on',bs[j]===this);bs[j].setAttribute('aria-pressed',bs[j]===this?'true':'false');}$('diffdesc').textContent=DDESC[SELDIFF];});})();
 $('btn-start').addEventListener('click',function(){show('s-club');renderClubSel(1);});
 $('btn-start-old')&&$('btn-start-old').addEventListener('click',function(){
- var go=function(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+ var go=function(){clearSave();S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
  if(readSave())ask('今のセーブデータを消して、新しく始めますか？','新しく始める',go,true);else go();
 });
 $('btn-continue').addEventListener('click',function(){restoreGame();});
@@ -4606,6 +4647,7 @@ function fb(t,done){
  document.body.removeChild(ta);
 }
 initTitle();
+cloudInit();
 })();
 </script>
 </body>
