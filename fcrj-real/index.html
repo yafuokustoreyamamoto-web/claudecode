@@ -3772,7 +3772,7 @@ function openOffseason(){S.univNote='';var WT=worldTick();openOffseason0();var M
  if(nc.length||mn.length){S.offGrowth=(S.offGrowth||'')+(mn.length?'<li>📰 監督人事：'+mn.slice(0,8).join('／')+(mn.length>8?' ほか'+(mn.length-8)+'件':'')+'</li>':'')+(nc.length?'<li>🎓 現役を退いた'+nc.map(esc).join('、')+'が監督として指導者の道へ。</li>':'');$('o-growth').innerHTML=S.offGrowth;}
  S.mgrListIds=null;S.offGrowth=(S.offGrowth||'')+leadLine();$('o-growth').innerHTML=S.offGrowth;
  if(S.loanInBack&&S.loanInBack.length){S.offGrowth=(S.offGrowth||'')+'<li>🔁 レンタル期間満了：'+S.loanInBack.map(esc).join('、')+'。現有戦力の欄で<b>買い取る</b>か選べます（買い取らなければ保有元へ戻ります）。</li>';$('o-growth').innerHTML=S.offGrowth;S.loanInBack=[];}
- coachPhase();gemAnnounce();awakenAnnounce();saveGame('off');}
+ renderYouth();coachPhase();gemAnnounce();awakenAnnounce();saveGame('off');}
 function openOffseason0(){
  var moved=S.pendingMove||0;
  S.lastMoved=moved;
@@ -4057,7 +4057,7 @@ function randomEvent(when){
  for(var k=0;k<5;k++){var r=pick(E)();if(r)return r;}
  return null;
 }
-var YLV=[{n:'最小限',c:.05,g:0,in:1,pot:0,gem:.01},{n:'標準',c:.3,g:0,in:2,pot:2,gem:.015},{n:'強化',c:.8,g:1,in:3,pot:3,gem:.02},{n:'最高',c:2,g:1,in:3,pot:5,gem:.03}];
+var YLV=[{n:'最小限',c:.05,g:0,in:1,pot:0,gem:.01},{n:'標準',c:.3,g:0,in:2,pot:2,gem:.015},{n:'強化',c:.8,g:1,in:3,pot:3,gem:.02},{n:'最高',c:2,g:1,in:4,pot:5,gem:.03}];
 function ycost(){return r2(YLV[S.youthLv||0].c*(S.div>100?4:{1:2.5,2:1.5,3:1}[S.div]||1));}
 function youthIntake(n){
  S.youth=S.youth||[];var lv=S.youthLv||0;
