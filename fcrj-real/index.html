@@ -383,7 +383,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
 .tbl.mini tr.cutline td{border-bottom:2px solid rgba(255,194,26,.6);}
 .plist div{padding:6px 2px;border-bottom:1px solid var(--line);font-size:14px;}
 .cardimg{display:block;width:100%;margin-top:12px;border-radius:4px;border:1px solid var(--line);}
-body.orig #o-fin-sec,body.orig #o-fac-sec,body.orig #o-mgr-sec,body.orig #o-scout,body.orig .candmoney,body.orig [data-lpick],body.orig #o-youth .scpos,body.orig [data-rel]{display:none!important}
+body.orig #o-fin-sec,body.orig #o-fac-sec,body.orig #o-mgr-sec,body.orig #o-scout,body.orig .candmoney,body.orig [data-lpick],body.orig #o-youth-sec,body.orig [data-rel]{display:none!important}
 </style>
 </head>
 <body>
@@ -1646,7 +1646,7 @@ document.addEventListener('click',function(e){
  var tb=t.closest('[data-cltab]');if(tb){renderClubSel(+tb.getAttribute('data-cltab'));return;}
  var cb=t.closest('[data-club]');if(cb){var nm=cb.getAttribute('data-club');ask(esc(nm)+'のGMとして始めますか？'+(readSave()?'<br>今のセーブデータは消えます。':''),'このクラブで始める',function(){startClub(nm);});return;}
  if(t.closest('#btn-clback')){show('s-title');}
- if(t.closest('#btn-draftmode')){var go=function(){clearSave();S.origMode=true;S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+ if(t.closest('#btn-draftmode')){var go=function(){clearSave();S.origMode=true;S.youth=[];S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
   if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
 });
 var SQN=99,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
@@ -1871,7 +1871,7 @@ function buildSeason(){
  S.fixtures=[];
  for(var k=0;k<S.rivals.length;k++){S.fixtures.push({c:k,home:true});S.fixtures.push({c:k,home:false});}
  shuffle(S.fixtures);
- S.round=0;S.attBoost=1;S.summerDone=false;S.finRound=0;S.pts=0;S.w=0;S.d=0;S.l=0;S.gf=0;S.ga=0;
+ S.round=0;S.attBoost=1;S.summerDone=!!S.origMode;S.finRound=0;S.pts=0;S.w=0;S.d=0;S.l=0;S.gf=0;S.ga=0;
  for(var m=0;m<S.squad.length;m++){
   var p=S.squad[m];p.s=blankStats();p.cond=100;p.injuredUntil=p.carry||0;p.carry=0;p.temp=0;p.slumpUntil=0;p.ovr=ovrFor(p,p.pos);
  }
@@ -3790,7 +3790,7 @@ function gemAnnounce(){
 }
 function openOffseason(){S.univNote='';var WT=worldTick();openOffseason0();var MT=mgrTick();S.mgrListIds=null;renderMgr();renderFin();if(S.univNote){S.offGrowth=(S.offGrowth||'')+'<li>🎓 大学で力をつけた元ユースの'+esc(S.univNote)+'が、古巣への復帰を希望しています。獲得候補に入りました。</li>';$('o-growth').innerHTML=S.offGrowth;}var gone=youthGrow();var wev=Math.random()<.7?randomEvent('window'):null;
  if(gone.length||wev){S.offGrowth=(S.offGrowth||'')+(gone.length?'<li>ユースの'+gone.map(esc).join('、')+'がトップ昇格できず退団し、大学へ進学しました。</li>':'')+(wev?'<li>'+wev[0]+'</li>':'');$('o-growth').innerHTML=S.offGrowth;}
- var myRein=[];(S.retired||[]).forEach(function(x){var q=x.p,pk=Math.max(q.pk||0,q.ovr,realPeakOvr(q));REAL_OFF=true;var y=makePlayer0(-20,q.pos,16);REAL_OFF=false;delete usedNames[y.name];y.foreign=!!q.foreign;y.nat=q.nat||'';y.name=q.name;y.youth=true;y.pot=clamp(Math.round(pk+gauss()*2),50,97);var tg=y.pot-12-rnd(5);y.mod+=tg-y.ovr;y.ovr=ovrFor(y,y.pos);y.fee=0;y.reinOf=q.name;worldConsume(q);y.route='ユース（転生）';S.youth=(S.youth||[]).concat([y]);myRein.push(y);});
+ var myRein=[];(S.origMode?[]:(S.retired||[])).forEach(function(x){var q=x.p,pk=Math.max(q.pk||0,q.ovr,realPeakOvr(q));REAL_OFF=true;var y=makePlayer0(-20,q.pos,16);REAL_OFF=false;delete usedNames[y.name];y.foreign=!!q.foreign;y.nat=q.nat||'';y.name=q.name;y.youth=true;y.pot=clamp(Math.round(pk+gauss()*2),50,97);var tg=y.pot-12-rnd(5);y.mod+=tg-y.ovr;y.ovr=ovrFor(y,y.pos);y.fee=0;y.reinOf=q.name;worldConsume(q);y.route='ユース（転生）';S.youth=(S.youth||[]).concat([y]);myRein.push(y);});
  var dueR=(S.pendRein||[]).filter(function(x){return (S.year||1)>=x.wake;});S.pendRein=(S.pendRein||[]).filter(function(x){return (S.year||1)<x.wake;});
  dueR.forEach(function(x){REAL_OFF=true;var y=makePlayer0(-20,x.pos,16);REAL_OFF=false;delete usedNames[y.name];y.foreign=x.f;y.nat=x.nat;y.name=x.n;y.youth=true;y.pot=clamp(Math.round(x.pot+gauss()*2),50,97);var tg=y.pot-12-rnd(5);y.mod+=tg-y.ovr;y.ovr=ovrFor(y,y.pos);y.fee=0;y.reinOf=x.n;y.route='ユース（転生）';S.youth=(S.youth||[]).concat([y]);myRein.push(y);});
  S.w=packWorld();
@@ -4093,6 +4093,7 @@ function randomEvent(when){
 var YLV=[{n:'最小限',c:.05,g:0,in:1,pot:0,gem:.01},{n:'標準',c:.3,g:0,in:2,pot:2,gem:.015},{n:'強化',c:.8,g:1,in:3,pot:3,gem:.02},{n:'最高',c:2,g:1,in:4,pot:5,gem:.03}];
 function ycost(){return r2(YLV[S.youthLv||0].c*(S.div>100?4:{1:2.5,2:1.5,3:1}[S.div]||1));}
 function youthIntake(n){
+ if(S.origMode){S.youth=[];return;}
  S.youth=S.youth||[];var lv=S.youthLv||0;
  for(var i=0;i<n;i++){REAL_OFF=true;var p=makePlayer0(-20+lv*3,'',15+rnd(2));REAL_OFF=false;
   if(p.foreign){delete usedNames[p.name];p.foreign=false;p.nat='';p.name=uniqueName();}
@@ -4101,6 +4102,7 @@ function youthIntake(n){
   S.youth.push(p);}
 }
 function youthGrow(){
+ if(S.origMode){S.youth=[];return [];}
  var lv=S.youthLv||0,out=[];
  (S.youth||[]).forEach(function(p){p.age++;var g=Math.min(Math.max(0,p.pot-p.ovr),2+rnd(4)+YLV[lv].g+(p.reinOf?2:0));p.mod+=g;p.ovr=ovrFor(p,p.pos);});
  S.youth=(S.youth||[]).filter(function(p){if(p.age>=19){out.push(p.name);var u=(S.univs&&S.univs.length)?pick(S.univs).name:'大学';S.univAlumni=S.univAlumni||[];S.univAlumni.push({p:p,u:u,back:S.year+3+rnd(2)});return false;}return true;});
@@ -4200,7 +4202,7 @@ function updateCandCount(){
  $('btn-tolist').disabled=n<S.minPick||over;
  if(!S.origMode)$('o-count').textContent+='　移籍金＋今季の年俸 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0)+(n?'（獲得後 '+moneyTxt(r2((S.money||0)-cost))+'・年俸 +'+feeTxt(pickedSal())+'/年）':'');
  if($('o-fin'))renderFin();if($('o-scout')&&$('sc-fee')){var sf=$('sc-fee');if(parseFloat(sf.value)>Math.max(0,availMoney()))sf.value=Math.max(0,availMoney());var sb=document.querySelector('.scoutbox .avail');if(sb)sb.textContent=moneyTxt(availMoney());}
- $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
+ $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
 }
 function openRelease(){
  if(S.realStart){startNextSeason();return;}
