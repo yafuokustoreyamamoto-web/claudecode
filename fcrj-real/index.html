@@ -383,6 +383,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
 .tbl.mini tr.cutline td{border-bottom:2px solid rgba(255,194,26,.6);}
 .plist div{padding:6px 2px;border-bottom:1px solid var(--line);font-size:14px;}
 .cardimg{display:block;width:100%;margin-top:12px;border-radius:4px;border:1px solid var(--line);}
+body.orig #o-fin-sec,body.orig #o-fac-sec,body.orig #o-mgr-sec,body.orig #o-scout,body.orig .candmoney,body.orig [data-lpick],body.orig #o-youth .scpos,body.orig [data-rel]{display:none!important}
 </style>
 </head>
 <body>
@@ -416,7 +417,7 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);font-si
   </div>
   <p class="sub" id="diffdesc" style="margin:6px 0 12px;font-size:12px">原作どおりのバランス。見送り10回。</p>
   <button class="btn cta" id="btn-start">クラブを選んで始める</button>
-  <button class="btn ghost small" id="btn-draftmode" style="margin-top:8px">ドラフトで始める（原作ルール・J3から）</button>
+  <button class="btn ghost small" id="btn-draftmode" style="margin-top:8px">原作モードで始める（お金なし・選手はガチャで獲得・J3から）</button>
   <button class="btn ghost small" id="btn-import" style="margin-top:10px">セーブデータを読み込む</button>
   <p class="sub" style="margin:14px 0 0;font-size:11px;opacity:.75">実在選手データ版（非公式の改造版）。原作：Football Champion Road J（kanasama）。選手の能力値は名鑑の独自査定をゲーム用に換算したもので、公式の評価ではありません。</p>
   <input type="file" id="i-import" accept=".json,application/json" hidden>
@@ -1377,6 +1378,7 @@ function opex(){if(S.oxR!=null)return r2(expRev()*S.oxR);return r2((S.div>100?lg
 function feeOfP(p){if(p.fee!=null)return p.fee;if(p.prospect)return 0;return r2(Math.max(0,.00035*Math.pow(Math.max(0,p.ovr-58),2.3)));}
 function homeGames(from,to){return (S.log||[]).filter(function(x){return x.t==='m'&&x.h&&x.r>from&&x.r<=to;}).length;}
 function finance(kind){
+ if(S.origMode){S.fin=null;S.saleIncome=0;S.buyCost=0;S.prizePending=0;S.salPre=0;S.relCr=0;S.facCost=0;return;}
  var d=S.div,n=S.w+S.d+S.l,wr=n?(S.w+S.d*.4)/n:.5,rep=S.rep||0;
  var from=S.finRound||0,to=S.round||0,hg=homeGames(from,to);S.finRound=to;
  var X=lgx(d),sc=S.scale||1;if(S.oxR!=null&&S.spA==null)S.spA=X.sp*sc*(1+(rep-(S.rep0||0))/300);
@@ -1618,6 +1620,7 @@ function preseason(c){
  genCands();renderOffFromState();saveGame('off');
 }
 function startClub(name){
+ S.origMode=false;
  clearSave();
  S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};S.euUsed={};buildPool();S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);
  var c=null;S.pool.forEach(function(x){if(x.name===name)c=x;});if(!c)return;
@@ -1643,7 +1646,7 @@ document.addEventListener('click',function(e){
  var tb=t.closest('[data-cltab]');if(tb){renderClubSel(+tb.getAttribute('data-cltab'));return;}
  var cb=t.closest('[data-club]');if(cb){var nm=cb.getAttribute('data-club');ask(esc(nm)+'のGMとして始めますか？'+(readSave()?'<br>今のセーブデータは消えます。':''),'このクラブで始める',function(){startClub(nm);});return;}
  if(t.closest('#btn-clback')){show('s-title');}
- if(t.closest('#btn-draftmode')){var go=function(){clearSave();S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
+ if(t.closest('#btn-draftmode')){var go=function(){clearSave();S.origMode=true;S.realStart=false;S.scale=1;S.diff=SELDIFF;S.realUsed={};S.legUsed={};S.osUsed={};buildPool();S.money=3;S.fin=null;S.mgrOpen=false;S.youth=[];S.youthLv=1;S.gemNews=[];youthIntake(3);(function(){var f=freeMgrs().filter(function(m){return m.r<=1.6;});S.mgr=f.length?pick(f):null;})();startDraft();};
   if(readSave())ask('今のセーブデータを消して、ドラフトで始めますか？','ドラフトで始める',go,true);else go();}
 });
 var SQN=99,QUOTA={GK:3,CB:5,SB:4,DM:2,CM:3,OM:2,WG:3,CF:3};
@@ -1802,6 +1805,7 @@ var S={squad:[],phase:1,passes:PASSES,cur:null,form:'4-4-2',tac:'poss',pol:'bal'
  year:1,div:3,pool:[],stock:[],history:[],archive:[],log:[],cands:[],picked:[],releasing:[],
  round:0,rounds:40,pts:0,w:0,d:0,l:0,gf:0,ga:0,fixtures:[],rivals:[],timer:null,ts:null,sg:'base'};
 function show(id){
+ document.body.classList.toggle('orig',!!S.origMode);
  if(id==='s-season'&&document.getElementById('btn-skip'))document.getElementById('btn-skip').textContent=S.summerDone?'シーズンの最後まで飛ばす':'前半戦の終わり（夏の移籍期間）まで飛ばす';
  var a=document.querySelectorAll('.screen'),i;
  for(i=0;i<a.length;i++)a[i].classList.remove('on');
@@ -4058,6 +4062,7 @@ function lvOfPlayer(p){
 }
 function myLv(){return S.div>100?(['GB1','ES1','L1','IT1','FR1'].indexOf(LGC[S.div-101])>-1?5:4):({1:3,2:2,3:1}[S.div]||1);}
 function accP(p){
+ if(S.origMode)return 1;
  if(p.released)return .95;
  if(p.os!=null){return clamp(.1+(p.age>=31?.4:p.age>=28?.15:0)+(S.div===1?.08:S.div>100?.2:-.06)+((S.rep||0)-40)/250-(p.ovr>=85?.08:0),.03,.8);}
  var lp=lvOfPlayer(p);if(!lp)return .97;
@@ -4191,9 +4196,9 @@ function renderCands(){
 function updateCandCount(){
  var n=S.picked.length,rel=n-S.holes.length;
  $('o-count').textContent='獲得 '+n+(S.realStart?'人':' / '+S.cap)+(S.minPick?'（最低'+S.minPick+'人）':'');
- var cost=r2(S.picked.reduce(function(s,k){return s+pickTotal(S.cands[k]);},0)),over=cost>(S.money||0)&&cost>0;
+ var cost=r2(S.picked.reduce(function(s,k){return s+pickTotal(S.cands[k]);},0)),over=!S.origMode&&cost>(S.money||0)&&cost>0;
  $('btn-tolist').disabled=n<S.minPick||over;
- $('o-count').textContent+='　移籍金＋今季の年俸 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0)+(n?'（獲得後 '+moneyTxt(r2((S.money||0)-cost))+'・年俸 +'+feeTxt(pickedSal())+'/年）':'');
+ if(!S.origMode)$('o-count').textContent+='　移籍金＋今季の年俸 '+feeTxt(cost)+'／残高 '+moneyTxt(S.money||0)+(n?'（獲得後 '+moneyTxt(r2((S.money||0)-cost))+'・年俸 +'+feeTxt(pickedSal())+'/年）':'');
  if($('o-fin'))renderFin();if($('o-scout')&&$('sc-fee')){var sf=$('sc-fee');if(parseFloat(sf.value)>Math.max(0,availMoney()))sf.value=Math.max(0,availMoney());var sb=document.querySelector('.scoutbox .avail');if(sb)sb.textContent=moneyTxt(availMoney());}
  $('btn-tolist').textContent=over?'予算オーバー（選び直してください）':n===0?'補強せずに次へ':(n<S.minPick?'あと'+(S.minPick-n)+'人獲得が必要':(rel>0&&!S.realStart?n+'人を獲得して放出へ':n+'人を獲得して次へ'));
 }
